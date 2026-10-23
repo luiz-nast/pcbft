@@ -25,6 +25,9 @@ FURO_NPTH_MIN = 0.50   # menor furo sem cobre
 ANEL_MIN = 0.18        # anel de cobre em volta do furo passante (minimo absoluto; recomendado 0,25)
 BORDA_MIN = 0.2        # cobre ate a borda cortada (furo sem cobre conta como borda)
 FURO_FURO_MIN = 0.45   # entre furos de pad, de borda a borda
+PONTE_MIN = 0.10       # mascara entre dois pads (cor verde, 1 oz)
+SILK_MIN = 0.15        # linha da serigrafia
+LETRA_MIN = 1.0        # altura da letra da serigrafia
 
 ETAPAS = ["Lê o txt", "Confere peças", "Confere ligações",
           "Regras da fábrica", "Relê o Gerber", "Tira foto da placa"]
@@ -250,6 +253,14 @@ def regras_fabrica(ctx):
             d = distancia((miolo, raio), (("seg", (f["x"], f["y"]), (f["x"], f["y"])), f["d"] / 2))
             if d < BORDA_MIN:
                 problemas.append((f"{nome} a {mm(d)} mm do furo de fixação (mínimo {mm(BORDA_MIN)})", refs(nome), "perto do furo"))
+    pads = [(n, m, r) for n, _, m, r in cobres(modelo) if not n.startswith("trilha")]
+    for i, (n1, m1, r1) in enumerate(pads):
+        for n2, m2, r2 in pads[i + 1:]:
+            d = distancia((m1, r1), (m2, r2))
+            if 0 < d < PONTE_MIN:
+                problemas.append((f"máscara entre {n1} e {n2} com {mm(d)} mm (mínimo {mm(PONTE_MIN)})", refs(n1, n2), "máscara"))
+    if min(gerar.SILK, gerar.LETRA_LINHA) < SILK_MIN or gerar.LETRA < LETRA_MIN:
+        problemas.append((f"serigrafia fina demais (linha {mm(SILK_MIN)} e letra {mm(LETRA_MIN)} mm no mínimo)", [], ""))
     if problemas:
         mais = f" (+{len(problemas) - 1})" if len(problemas) > 1 else ""
         rotulos = {}
@@ -257,7 +268,7 @@ def regras_fabrica(ctx):
             for ref in onde:
                 rotulos.setdefault(ref, rotulo)
         raise Falhou(problemas[0][0] + mais, rotulos=rotulos)
-    return "trilha, espaço, furo, anel e distância da borda (JLCPCB)"
+    return "trilha, espaço, furo, anel, borda, máscara e serigrafia (JLCPCB)"
 
 
 MAPA_GERBER = {r".*-F_Cu\.gbr": "top copper", r".*-B_Cu\.gbr": "bottom copper",
