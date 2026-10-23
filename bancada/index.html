@@ -602,6 +602,9 @@ function desenharTestes(main) {
       <span class="titulo-placa">${titulo}</span>
       ${placa}
       <div class="links">${links}${fotoOk ? `<a href="${BASE}saida/foto.png" target="_blank" rel="noopener">Ver a foto tirada do Gerber ↗</a>` : ''}</div>
+      ${m?.fabrica ? (m.fabrica.pronta && !falha && !t.rodando
+        ? `<div class="links"><a href="${BASE}saida/fabrica.zip" download>Baixar fabrica.zip ↓</a></div>`
+        : `<span class="sub">fabrica.zip ${m.fabrica.pronta ? 'sai quando todos os testes passarem' : 'bloqueado: medidas de exemplo em ' + esc(m.fabrica.falta_datasheet.join(', '))}</span>`) : ''}
     </div>
   </section>`;
 }
