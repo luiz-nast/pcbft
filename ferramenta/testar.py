@@ -31,9 +31,13 @@ ETAPAS = ["Lê o txt", "Confere peças", "Confere ligações",
 
 
 class Falhou(Exception):
-    def __init__(self, detalhe, onde=(), linha=None):
+    """etapa falhou; rotulos diz, pra cada peca, a etiqueta vermelha que a bancada desenha nela"""
+
+    def __init__(self, detalhe, onde=(), rotulo=None, rotulos=None):
         super().__init__(detalhe)
-        self.detalhe, self.onde, self.linha = detalhe, list(onde), linha
+        self.detalhe = detalhe
+        self.rotulos = rotulos or {ref: rotulo for ref in onde}
+        self.onde = list(self.rotulos)
 
 
 def mm(v):
@@ -162,27 +166,27 @@ def confere_ligacoes(ctx):
             livre = next(p["n"] for p in peca["pinos"] if p not in usados)
             solto.append(f"{peca['ref']}.{livre}")
     if sem:
-        raise Falhou(f"{' e '.join(sem)} sem ligação", sem)
+        raise Falhou(f"{' e '.join(sem)} sem ligação", sem, "sem ligação")
     if solto:
-        raise Falhou(f"pino solto: {', '.join(solto)}", refs(*solto))
+        raise Falhou(f"pino solto: {', '.join(solto)}", refs(*solto), "pino solto")
     curtos = pares_perto(modelo, 0)
     if curtos:
         _, a, b = curtos[0]
         raise Falhou(f"curto: {a} encosta em {b}" + (f" (+{len(curtos) - 1})" if len(curtos) > 1 else ""),
-                     refs(a, b))
+                     refs(a, b), "curto")
     return f"{len(modelo['trilhas'])} ligações, nenhum pino solto, nenhum curto"
 
 
 def regras_fabrica(ctx):
     modelo = ctx["modelo"]
     w, h = modelo["placa"]["w"], modelo["placa"]["h"]
-    problemas = []   # (texto, onde)
+    problemas = []   # (texto, onde, rotulo)
     for t in modelo["trilhas"]:
         if t["largura"] < TRILHA_MIN:
             problemas.append((f"trilha {t['de']}–{t['ate']} com {mm(t['largura'])} mm (mínimo {mm(TRILHA_MIN)})",
-                              refs(t["de"], t["ate"])))
+                              refs(t["de"], t["ate"]), "trilha fina"))
     for d, a, b in pares_perto(modelo, ESPACO_MIN):
-        problemas.append((f"{a} a {mm(max(d, 0))} mm de {b} (mínimo {mm(ESPACO_MIN)})", refs(a, b)))
+        problemas.append((f"{a} a {mm(max(d, 0))} mm de {b} (mínimo {mm(ESPACO_MIN)})", refs(a, b), "perto demais"))
     furos_pad = []
     for peca in modelo["pecas"]:
         for p in peca["pinos"]:
@@ -191,35 +195,38 @@ def regras_fabrica(ctx):
             nome = f"{peca['ref']}.{p['n']}"
             furos_pad.append((nome, p["x"], p["y"], p["furo"]))
             if not FURO_MIN <= p["furo"] <= FURO_MAX:
-                problemas.append((f"furo de {nome} com {mm(p['furo'])} mm", [peca["ref"]]))
+                problemas.append((f"furo de {nome} com {mm(p['furo'])} mm", [peca["ref"]], "furo"))
             menor = p["pad"]["d"] if p["pad"]["forma"] == "C" else min(p["pad"]["w"], p["pad"]["h"])
             anel = (menor - p["furo"]) / 2
             if anel < ANEL_MIN:
-                problemas.append((f"anel de {nome} com {mm(anel)} mm (mínimo {mm(ANEL_MIN)})", [peca["ref"]]))
+                problemas.append((f"anel de {nome} com {mm(anel)} mm (mínimo {mm(ANEL_MIN)})", [peca["ref"]], "anel fino"))
     for i, (n1, x1, y1, d1) in enumerate(furos_pad):
         for n2, x2, y2, d2 in furos_pad[i + 1:]:
             vao = math.hypot(x1 - x2, y1 - y2) - d1 / 2 - d2 / 2
             if vao < FURO_FURO_MIN:
-                problemas.append((f"furos {n1} e {n2} a {mm(vao)} mm (mínimo {mm(FURO_FURO_MIN)})", refs(n1, n2)))
+                problemas.append((f"furos {n1} e {n2} a {mm(vao)} mm (mínimo {mm(FURO_FURO_MIN)})", refs(n1, n2), "furos colados"))
     for f in modelo["furos"]:
         if f["d"] < FURO_NPTH_MIN:
-            problemas.append((f"furo de fixação com {mm(f['d'])} mm (mínimo {mm(FURO_NPTH_MIN)})", []))
+            problemas.append((f"furo de fixação com {mm(f['d'])} mm (mínimo {mm(FURO_NPTH_MIN)})", [], ""))
         r = f["d"] / 2
         if f["x"] - r < 0 or f["y"] - r < 0 or f["x"] + r > w or f["y"] + r > h:
-            problemas.append(("furo de fixação fora da placa", []))
+            problemas.append(("furo de fixação fora da placa", [], ""))
     for nome, _, miolo, raio in cobres(modelo):
         x0, y0, x1, y1 = caixa(miolo, raio)
         folga = min(x0, y0, w - x1, h - y1)
         if folga < BORDA_MIN:
-            problemas.append((f"{nome} a {mm(folga)} mm da borda (mínimo {mm(BORDA_MIN)})", refs(nome)))
+            problemas.append((f"{nome} a {mm(folga)} mm da borda (mínimo {mm(BORDA_MIN)})", refs(nome), "perto da borda"))
         for f in modelo["furos"]:
             d = distancia((miolo, raio), (("seg", (f["x"], f["y"]), (f["x"], f["y"])), f["d"] / 2))
             if d < BORDA_MIN:
-                problemas.append((f"{nome} a {mm(d)} mm do furo de fixação (mínimo {mm(BORDA_MIN)})", refs(nome)))
+                problemas.append((f"{nome} a {mm(d)} mm do furo de fixação (mínimo {mm(BORDA_MIN)})", refs(nome), "perto do furo"))
     if problemas:
-        texto, onde = problemas[0]
         mais = f" (+{len(problemas) - 1})" if len(problemas) > 1 else ""
-        raise Falhou(texto + mais, sorted({r for _, o in problemas for r in o}))
+        rotulos = {}
+        for _, onde, rotulo in problemas:
+            for ref in onde:
+                rotulos.setdefault(ref, rotulo)
+        raise Falhou(problemas[0][0] + mais, rotulos=rotulos)
     return "trilha, espaço, furo, anel e distância da borda (JLCPCB)"
 
 
@@ -285,12 +292,15 @@ def rodar(pasta, frase=None):
         try:
             etapa["detalhe"] = funcao(ctx)
             etapa["estado"] = "ok"
-        except (Falhou, gerar.ErroTxt) as e:
-            linha = getattr(e, "linha", None)
-            etapa.update(estado="falhou", detalhe=f"linha {linha}: {e.msg}" if isinstance(e, gerar.ErroTxt) else e.detalhe,
-                         onde=e.onde, linha=linha)
+        except Falhou as e:
+            etapa.update(estado="falhou", detalhe=e.detalhe, onde=e.onde, rotulos=e.rotulos)
+        except gerar.ErroTxt as e:
+            linhas = ctx.get("texto", "").splitlines()
+            etapa.update(estado="falhou", detalhe=f"linha {e.linha}: {e.msg}", onde=e.onde, linha=e.linha,
+                         codigo=linhas[e.linha - 1] if 0 < e.linha <= len(linhas) else "",
+                         rotulos={ref: "erro no txt" for ref in e.onde})
         except Exception as e:   # erro inesperado tambem para a rodada, sem esconder
-            etapa.update(estado="falhou", detalhe=f"erro inesperado: {e!r}", onde=[])
+            etapa.update(estado="falhou", detalhe=f"erro inesperado: {e!r}", onde=[], rotulos={})
         if etapa["estado"] == "falhou":
             for resto in estado["etapas"][estado["etapas"].index(etapa) + 1:]:
                 resto["estado"] = "nao_rodou"
