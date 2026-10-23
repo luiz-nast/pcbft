@@ -56,12 +56,14 @@ O status é calculado pelo `testar.py`. Nunca escreva status à mão. Checagem n
 
 ## Biblioteca
 
-`ferramenta/biblioteca.py`: `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, fonte`. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo, e a bancada avisa. Não sabe a medida? Pergunte ou deixe pendente.
+`ferramenta/biblioteca.py`: `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, fonte`. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo: a bancada avisa e o `fabrica.zip` não é gerado. Não sabe a medida? Pergunte ou deixe pendente.
 
 ## Regras de formato (já aprendidas)
 
 - Gerber: `%FSLAX46Y46*%` e `%MOMM*%`, coordenadas em milionésimos de mm (arredondar, não truncar), `G01*` antes de desenhar, `D02` move, `D01` desenha, `D03` carimba pad, `M02*` no fim. Aberturas a partir de `D10`.
 - Excellon: `M48`, `METRIC,TZ`, ferramentas `T1C3.200`, **`G90` antes do `%`** (fora do cabeçalho o leitor reclama), `M30` no fim. Furo com cobre (PTH) e sem cobre (NPTH) em arquivos separados.
+- Máscara: arquivo com `%TF.FilePolarity,Negative*%` (desenhar = abrir); abertura 1:1 com o pad.
+- Serigrafia: texto com a fonte de traços de `letras.py`, recortado pra ficar a 0,15 mm dos pads.
 - Nomes no padrão do KiCad (`placa-F_Cu.gbr`, `placa-Edge_Cuts.gbr`, `placa-PTH.drl`, `placa-NPTH.drl`): o gerbonara e a fábrica reconhecem sozinhos.
 - Regras da fábrica ficam em `testar.py`, com o link da página da JLCPCB. Mudou a página? Atualize o número e a data.
 
