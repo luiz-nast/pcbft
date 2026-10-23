@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bancada</title>
+<title>Chassi</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 :root {
@@ -54,6 +54,38 @@ main { flex: 1; min-height: 0; display: flex; }
 .aviso-versao { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); z-index: 5; padding: 6px 12px; border-radius: 999px; background: var(--painel); border: 1px solid var(--borda2); font-size: 12px; color: #C8CDD2; }
 .hud { position: absolute; z-index: 6; pointer-events: none; display: flex; flex-direction: column; gap: 2px; background: rgba(14,16,18,0.92); border: 1px solid var(--borda2); border-radius: 8px; padding: 6px 10px; font-family: var(--mono); font-size: 12px; white-space: nowrap; }
 .hud .xy { color: var(--sec); }
+.tamanho { position: absolute; right: 16px; bottom: 12px; z-index: 5; pointer-events: none; font-family: var(--mono); font-size: 11px; color: var(--sec); }
+.ferramentas button[data-ligar][aria-pressed="true"] { background: var(--ok); color: #0E2A1A; }
+.ferramentas button[data-ligar][aria-pressed="true"]:hover { background: #8FE0B3; }
+.ferramentas button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* circuito ligado */
+.fluxo { stroke: #FFF3DC; stroke-dasharray: 0.9 0.9; stroke-linecap: round; fill: none; pointer-events: none; opacity: 0.9; animation: fluxo var(--dur, 1s) linear infinite; }
+@keyframes fluxo { to { stroke-dashoffset: -1.8; } }
+.brilho { fill: #FF8A80; pointer-events: none; }
+.corpo.apertado { fill: rgba(224, 164, 88, 0.35); }
+.painel .dica { margin: 0; font-size: 13px; color: var(--sec); line-height: 1.5; }
+.controle { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.controle > span { display: flex; justify-content: space-between; gap: 8px; }
+.controle b { font-family: var(--mono); font-weight: 500; }
+.controle input[type="range"] { width: 100%; accent-color: var(--cobre); margin: 0; }
+.controle .faixa { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--sec); }
+.chaves { display: flex; flex-wrap: wrap; gap: 8px; }
+.chaves .pilula[aria-pressed="true"] { background: var(--ativo); color: var(--texto); border-color: var(--borda2); }
+.leitura { display: flex; flex-direction: column; gap: 6px; font-size: 13px; padding-top: 12px; border-top: 1px solid var(--borda); }
+.leitura > span { display: flex; justify-content: space-between; gap: 8px; }
+.leitura b { font-family: var(--mono); font-weight: 500; }
+.leitura b.aceso, .leitura b.ok { color: var(--ok); } .leitura b.forte { color: var(--cobre); } .leitura b.queima { color: var(--erro); font-weight: 600; }
+.barra { position: relative; height: 8px; margin: 6px 0 2px; border-radius: 4px; background: #22272C; }
+.barra i { position: absolute; display: block; }
+.barra .faixa-b { top: 0; bottom: 0; background: rgba(111, 211, 155, 0.35); border-radius: 4px; }
+.barra .marca { top: -3px; width: 2px; height: 14px; background: var(--texto); }
+.barra .teste { top: 1px; width: 1px; height: 6px; background: var(--sec); }
+.barra .limite { top: -2px; width: 2px; height: 12px; background: var(--erro); }
+.leitura .legenda { font-family: var(--mono); font-size: 11px; color: var(--sec); line-height: 1.5; }
+.agora { font-family: var(--mono); font-size: 13px; padding: 8px 10px; border-radius: 8px; background: #173A26; color: var(--ok); }
+.agora.queima { background: #3A1A1A; color: var(--erro); }
+.formula { margin: 0; font-family: var(--mono); font-size: 12px; color: var(--sec); line-height: 1.6; }
 
 aside.inspetor { flex: 0 0 340px; overflow: auto; padding: 20px; border-left: 1px solid var(--borda); display: flex; flex-direction: column; gap: 16px; font-size: 14px; }
 .inspetor .cab { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
@@ -102,6 +134,9 @@ svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; backgr
 .reqs li.ok { color: var(--ok); } .reqs li.falha { color: var(--cobre); }
 .versoes-lista li { color: #C8CDD2; line-height: 1.45; }
 .placa-resumo { display: grid; grid-template-columns: minmax(0, 260px) 1fr; gap: 16px; align-items: start; }
+.caminho { max-width: 760px; margin: 0 auto 20px; font-size: 13px; color: var(--sec); line-height: 1.6; text-align: center; }
+.compras li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; color: #C8CDD2; }
+.compras .mono { color: var(--sec); min-width: 32px; }
 .cotacao { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--borda); padding-top: 12px; }
 .cotacao dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
 .cotacao dt { color: var(--sec); } .cotacao dd { margin: 0; }
@@ -156,6 +191,7 @@ svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; backgr
 .etapa.ok .bola { background: #173A26; color: var(--ok); } .etapa.ok .estado { color: var(--ok); }
 .etapa.rodando { border-color: #5A4527; } .etapa.rodando .bola { background: #3A2E17; color: var(--cobre); } .etapa.rodando .estado { color: var(--cobre); }
 .etapa.falhou { border-color: #6B2A2A; } .etapa.falhou .bola { background: #3A1A1A; color: var(--erro); } .etapa.falhou .estado { color: var(--erro); }
+.etapa.pulou .bola { background: #22272C; color: var(--sec); } .etapa.pulou .estado { color: var(--sec); }
 .etapa.aguardando .bola, .etapa.nao_rodou .bola { background: #22272C; color: #6B747D; }
 .etapa.aguardando .estado, .etapa.nao_rodou .estado { color: #8A939C; }
 .testes .titulo-placa { font-size: 13px; font-weight: 600; color: var(--sec); }
@@ -185,7 +221,7 @@ svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; backgr
 <body>
 <header>
   <a class="voltar" id="voltar" href="./" aria-label="Voltar aos projetos" title="Projetos">←</a>
-  <span class="nome" id="nome">Bancada de placas</span>
+  <span class="nome" id="nome">Chassi</span>
   <nav aria-label="Abas" id="abas">
     <button type="button" data-aba="processo">Processo</button>
     <button type="button" data-aba="thinking">Thinking</button>
@@ -211,6 +247,8 @@ const BASE = `../placas/${encodeURIComponent(PLACA)}/`;
 
 const S = {
   aba: 'processo', detalhado: false,
+  ligado: false,         // circuito ligado no papel (aba Projeto)
+  ajustes: { pilha: {}, resistor: {}, chave: {} },   // o que o painel mudou
   api: false,            // true quando a pagina vem do app.py (da pra rodar os testes daqui)
   cotacao: null,         // fabrica.json: o que aconteceu no site da fabrica
   modelo: null, testes: null, versoes: [],
@@ -287,6 +325,121 @@ function pinosDaNet(m, net) {
   return lista;
 }
 
+// "D1.1" vira "D1 +", "SW1.3" vira "SW1 B"; sem nome na biblioteca, fica o numero
+function nomePino(m, nome) {
+  const pino = pinoDe(m, nome);
+  return pino?.nome ? `${nome.split('.')[0]} ${pino.nome}` : nome;
+}
+
+// troca todo REF.N de um texto pelo nome de gente
+function traduz(m, texto) {
+  if (!m) return texto;
+  return String(texto).replace(/\b([A-Za-z_]\w*)\.(\w+)\b/g, (s, ref, n) => nomePino(m, `${ref}.${n}`));
+}
+
+function eletricaDe(m, nome) {
+  return m.pecas.find(p => p.ref === nome.split('.')[0])?.eletrica;
+}
+
+// ---------- liga o circuito no papel (o mesmo modelo de ferramenta/circuito.py; mudou la, muda aqui) ----------
+const GMIN = 1e-9, R_CHAVE = 1e-3;
+const E24 = [10, 11, 12, 13, 15, 16, 18, 20, 22, 24, 27, 30, 33, 36, 39, 43, 47, 51, 56, 62, 68, 75, 82, 91];
+const OHMS = [1, 10, 100, 1000].flatMap(d => E24.map(v => v * d));   // 10 Ω a 91 kΩ
+
+function resolverLinear(A, b) {
+  const n = b.length, M = A.map((l, i) => [...l, b[i]]);
+  for (let c = 0; c < n; c++) {
+    let p = c;
+    for (let i = c + 1; i < n; i++) if (Math.abs(M[i][c]) > Math.abs(M[p][c])) p = i;
+    [M[c], M[p]] = [M[p], M[c]];
+    if (Math.abs(M[c][c]) < 1e-18) return null;
+    for (let i = 0; i < n; i++) {
+      if (i === c || !M[i][c]) continue;
+      const f = M[i][c] / M[c][c];
+      for (let j = c; j <= n; j++) M[i][j] -= f * M[c][j];
+    }
+  }
+  return M.map((l, i) => l[n] / l[i]);
+}
+
+function simular(m, aj) {
+  const pecas = m.pecas.filter(p => p.eletrica);
+  const netDe = {};
+  for (const p of m.pecas) for (const q of p.pinos) netDe[`${p.ref}.${q.n}`] = q.net;
+  const net = (ref, n) => netDe[`${ref}.${n}`];
+  const pilhas = pecas.filter(p => p.eletrica.modelo === 'pilha');
+  if (!pilhas.length) return null;
+  const terra = net(pilhas[0].ref, pilhas[0].eletrica.menos);
+  const nets = [...new Set(Object.values(netDe).filter(n => n && n !== terra))].sort();
+  const idx = Object.fromEntries(nets.map((n, i) => [n, i]));
+  const acesos = Object.fromEntries(pecas.filter(p => p.eletrica.modelo === 'led').map(p => [p.ref, true]));
+  let v = {}, iFonte = {};
+  for (let volta = 0; volta < 20; volta++) {
+    const fontes = [];
+    for (const p of pilhas) fontes.push([p.ref, net(p.ref, p.eletrica.mais), net(p.ref, p.eletrica.menos), aj.pilha[p.ref] ?? p.eletrica.v]);
+    for (const p of pecas) if (p.eletrica.modelo === 'led' && acesos[p.ref]) fontes.push([p.ref, net(p.ref, '1'), net(p.ref, '2'), p.eletrica.vf]);
+    const N = nets.length, M = fontes.length;
+    const A = Array.from({ length: N + M }, () => new Array(N + M).fill(0)), b = new Array(N + M).fill(0);
+    for (let i = 0; i < N; i++) A[i][i] += GMIN;
+    const cond = (na, nb, g) => {
+      for (const [x, outro] of [[na, nb], [nb, na]]) {
+        if (x === terra) continue;
+        A[idx[x]][idx[x]] += g;
+        if (outro !== terra) A[idx[x]][idx[outro]] -= g;
+      }
+    };
+    for (const p of pecas) {
+      const e = p.eletrica;
+      if (e.modelo === 'resistor') cond(net(p.ref, '1'), net(p.ref, '2'), 1 / (aj.resistor[p.ref] ?? p.valor));
+      else if (e.modelo === 'chave' && aj.chave[p.ref]) cond(net(p.ref, e.lados[0][0]), net(p.ref, e.lados[1][0]), 1 / R_CHAVE);
+    }
+    fontes.forEach(([ref, mais, menos, volts], k) => {
+      for (const [x, sg] of [[mais, 1], [menos, -1]]) if (x !== terra) { A[idx[x]][N + k] += sg; A[N + k][idx[x]] += sg; }
+      b[N + k] = volts;
+    });
+    const x = resolverLinear(A, b);
+    if (!x) return null;
+    v = Object.fromEntries(nets.map(n => [n, x[idx[n]]]));
+    v[terra] = 0;
+    iFonte = Object.fromEntries(fontes.map(([ref], k) => [ref, x[N + k]]));
+    let mudou = false;   // LED aceso puxando pra tras apaga; apagado com tensao acima de vf acende
+    for (const p of pecas) {
+      if (p.eletrica.modelo !== 'led') continue;
+      if (acesos[p.ref] && iFonte[p.ref] < -1e-12) { acesos[p.ref] = false; mudou = true; }
+      else if (!acesos[p.ref] && v[net(p.ref, '1')] - v[net(p.ref, '2')] > p.eletrica.vf + 1e-9) { acesos[p.ref] = true; mudou = true; }
+    }
+    if (!mudou) break;
+  }
+  const saida = {}, entra = {};   // entra: corrente que entra na peca por cada pino
+  for (const p of pecas) {
+    const e = p.eletrica, ref = p.ref;
+    if (e.modelo === 'resistor') {
+      const ohms = aj.resistor[ref] ?? p.valor, i = (v[net(ref, '1')] - v[net(ref, '2')]) / ohms;
+      saida[ref] = { i, p: i * i * ohms, ohms }; entra[`${ref}.1`] = i; entra[`${ref}.2`] = -i;
+    } else if (e.modelo === 'led') {
+      const i = acesos[ref] ? Math.max(iFonte[ref] ?? 0, 0) : 0;
+      saida[ref] = { i, acende: i >= 0.001, forte: i > (e.i_teste + e.i_max) / 2, queima: i > e.i_max }; entra[`${ref}.1`] = i; entra[`${ref}.2`] = -i;
+    } else if (e.modelo === 'pilha') {
+      const i = -iFonte[ref];
+      saida[ref] = { i, v: aj.pilha[ref] ?? e.v }; entra[`${ref}.${e.mais}`] = -i; entra[`${ref}.${e.menos}`] = i;
+    } else if (e.modelo === 'chave') {
+      const ap = !!aj.chave[ref], i = ap ? (v[net(ref, e.lados[0][0])] - v[net(ref, e.lados[1][0])]) / R_CHAVE : 0;
+      saida[ref] = { i, apertada: ap };
+      for (const n of e.lados[0]) entra[`${ref}.${n}`] = i;
+      for (const n of e.lados[1]) entra[`${ref}.${n}`] = -i;
+    }
+  }
+  return { nets: v, pecas: saida, entra };
+}
+
+const mA = a => (Math.abs(a) >= 0.0095 ? (a * 1000).toFixed(0) : (a * 1000).toFixed(1).replace('.', ','));
+const mW = w => (w * 1000).toFixed(0);
+const volts = v => v.toFixed(1).replace('.', ',');
+const ohmsTxt = o => (o >= 1000 ? `${(o / 1000).toString().replace('.', ',')} kΩ` : `${o} Ω`);
+
+function estadoLed(r) { return r.queima ? 'queima' : r.forte ? 'forte' : r.acende ? 'aceso' : 'apagado'; }
+const TEXTO_LED = { queima: 'QUEIMA', forte: 'aceso forte', aceso: 'aceso', apagado: 'apagado' };
+
 // o que mudou da versao anterior pra esta (pra "destacar o que mudou")
 function novidades(m, ant) {
   const novos = new Set();
@@ -302,7 +455,7 @@ function novidades(m, ant) {
 }
 
 // ---------- desenho da placa em SVG ----------
-// o: {sel, novos:Set, erros:{ref:texto}, interativo}
+// o: {sel, novos:Set, erros:{ref:texto}, interativo, sim (circuito ligado), ajustes}
 function placaSVG(m, o = {}) {
   const W = m.placa.w, H = m.placa.h, Y = y => H - y;   // origem do txt e embaixo; a do SVG, em cima
   const fonte = Math.max(1.2, Math.min(2.2, Math.min(W, H) / 22));
@@ -327,13 +480,28 @@ function placaSVG(m, o = {}) {
   m.furos.forEach((f, i) => {
     s += `<circle class="furo${nets ? ' apagado' : ''}" cx="${f.x}" cy="${Y(f.y)}" r="${f.d / 2}"${alvo('furo:' + i)}/>`;
   });
+  if (o.sim) {   // brilho dos LEDs acesos, por baixo de tudo
+    s += '<defs><filter id="borrao" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="0.9"/></filter></defs>';
+    for (const p of m.pecas) {
+      const r = o.sim.pecas[p.ref];
+      if (!r || p.eletrica?.modelo !== 'led' || !r.acende) continue;
+      const forca = Math.min(1, r.i / p.eletrica.i_teste);
+      s += `<circle class="brilho" cx="${p.x}" cy="${Y(p.y)}" r="${p.corpo.w / 2 + 1.5 + forca * 1.5}" opacity="${(0.25 + 0.5 * forca).toFixed(2)}" filter="url(#borrao)"/>`;
+    }
+  }
   for (const p of m.pecas) {
     const c = p.corpo, x = p.x - c.w / 2, y = Y(p.y) - c.h / 2;
     const raio = c.redondo ? Math.min(c.w, c.h) / 2 : 0.4;
-    s += `<rect class="corpo${p.pinos.length > 8 ? ' modulo' : ''}${apaga(null, p.ref)}" x="${x}" y="${y}" width="${c.w}" height="${c.h}" rx="${raio}"${alvo('peca:' + p.ref)}/>`;
+    const apertado = o.sim && p.eletrica?.modelo === 'chave' && o.ajustes?.chave[p.ref] ? ' apertado' : '';
+    s += `<rect class="corpo${p.pinos.length > 8 ? ' modulo' : ''}${apaga(null, p.ref)}${apertado}" x="${x}" y="${y}" width="${c.w}" height="${c.h}" rx="${raio}"${alvo('peca:' + p.ref)}/>`;
   }
   m.trilhas.forEach((t, i) => {
     s += `<line class="trilha${apaga(t.net, null)}" x1="${t.x1}" y1="${Y(t.y1)}" x2="${t.x2}" y2="${Y(t.y2)}" stroke-width="${t.largura}"${alvo('trilha:' + i)}/>`;
+    const i_t = o.sim ? correnteNaTrilha(m, o.sim, t) : 0;
+    if (Math.abs(i_t) > 1e-6) {   // bolinhas andando no sentido da corrente, mais rapido com mais corrente
+      const dur = Math.min(3, Math.max(0.2, 15 / (Math.abs(i_t) * 1000)));
+      s += `<line class="fluxo" x1="${t.x1}" y1="${Y(t.y1)}" x2="${t.x2}" y2="${Y(t.y2)}" stroke-width="${t.largura * 0.55}" style="--dur:${dur.toFixed(2)}s;animation-direction:${i_t > 0 ? 'normal' : 'reverse'}"/>`;
+    }
   });
   for (const p of m.pecas) {
     for (const pino of p.pinos) {
@@ -360,6 +528,11 @@ function placaSVG(m, o = {}) {
     const pino = pinoDe(m, o.sel.nome);
     if (pino) s += `<circle class="sel-pino" cx="${pino.x}" cy="${Y(pino.y)}" r="${(pino.pad.d ?? Math.max(pino.pad.w, pino.pad.h)) / 2 + 0.45}"/>`;
   }
+  if (o.sim) {
+    for (const p of m.pecas) {
+      if (o.sim.pecas[p.ref]?.queima) { s += contorno(p.ref, 'erro', 1.2) + etiquetaAoLado(p, Y, W, 'queima!', fonte * 0.8, 'var(--erro)', '#2A0B08'); }
+    }
+  }
   for (const [ref, rotulo] of Object.entries(o.erros || {})) {
     const p = m.pecas.find(q => q.ref === ref);
     if (!p) continue;
@@ -380,6 +553,12 @@ function placaSVG(m, o = {}) {
   return s;
 }
 
+// corrente andando pela trilha, de (x1,y1) pra (x2,y2); olha a ponta que e resistor/LED, que so tem um caminho
+function correnteNaTrilha(m, sim, t) {
+  const peso = nome => ({ resistor: 2, led: 2, chave: 1 }[eletricaDe(m, nome)?.modelo] ?? 0);
+  return peso(t.ate) >= peso(t.de) ? (sim.entra[t.ate] ?? 0) : -(sim.entra[t.de] ?? 0);
+}
+
 function larguraEtiqueta(texto, fonte) { return texto.length * fonte * 0.62 + fonte * 1.2; }
 
 // etiqueta no canto de cima da peca; vai pro lado esquerdo se nao couber na placa
@@ -398,7 +577,7 @@ function etiqueta(x, y, texto, fonte, fundo, cor) {
 // ---------- topo ----------
 function desenharTopo() {
   $('#nome').textContent = S.testes?.objetivo?.titulo || PLACA;
-  document.title = `${$('#nome').textContent} · bancada`;
+  document.title = `${$('#nome').textContent} · Chassi`;
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-pressed', b.dataset.aba === S.aba));
   const t = S.testes, st = $('#status');
   if (!t) { st.textContent = 'sem testes'; st.style.color = 'var(--sec)'; }
@@ -435,12 +614,21 @@ function desenharProjeto(main) {
           <button type="button" data-zoom="1.25" aria-label="Aproximar (+)" title="Aproximar (+)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
           <button type="button" data-zoom="0.8" aria-label="Afastar (−)" title="Afastar (−)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
           <button type="button" class="zoom" data-centralizar aria-label="Centralizar (0)" title="Centralizar (0)">100%</button>
+          <hr>
+          <button type="button" data-ligar aria-label="Ligar o circuito (L)" title="Ligar o circuito (L)"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg></button>
         </div>
         <svg class="desenho" xmlns="http://www.w3.org/2000/svg"></svg>
+        <span class="tamanho"></span>
         <div class="hud" hidden><span class="nome-hud"></span><span class="xy"></span></div>
       </section>`;
   }
   const area = main.querySelector('.area');
+  area.querySelector('.tamanho').textContent = `${mm(m.placa.w, 0)} × ${mm(m.placa.h, 0)} mm · 2 camadas`;
+  const ligar = area.querySelector('[data-ligar]');
+  ligar.disabled = !m.simulacao?.pode;
+  ligar.setAttribute('aria-pressed', S.ligado && !ligar.disabled);
+  ligar.title = ligar.disabled ? `Não dá pra ligar no papel: ${[...(m.simulacao?.falta_modelo || []).map(r => r + ' sem modelo elétrico'), ...(m.simulacao?.sem_valor || []).map(r => r + ' sem valor em ohms')].join(', ') || 'sem modelo elétrico'}` : (S.ligado ? 'Desligar (L)' : 'Ligar o circuito (L)');
+  const sim = S.ligado && !ligar.disabled ? simular(m, S.ajustes) : null;
   area.classList.toggle('mao', S.modo === 'mao');
   area.querySelectorAll('[data-modo]').forEach(b => b.setAttribute('aria-pressed', b.dataset.modo === S.modo));
 
@@ -453,25 +641,134 @@ function desenharProjeto(main) {
   }
 
   const novos = S.destacar ? novidades(m, S.modelosVersao[(S.ver ?? versaoAtual()) - 1]) : null;
-  area.querySelector('.desenho').innerHTML = placaSVG(m, { sel: S.sel, novos, interativo: true });
+  area.querySelector('.desenho').innerHTML = placaSVG(m, { sel: S.sel, novos, interativo: true, sim, ajustes: S.ajustes });
   if (S.cx === null) centralizar();
   aplicarZoom();
 
   let painel = main.querySelector('aside.inspetor');
-  const info = S.sel && inspecionar(m, S.sel);
-  if (!info) { painel?.remove(); return; }
+  const info = S.sel && inspecionar(m, S.sel, sim);
+  if (!info && !sim) { painel?.remove(); return; }
+  if (!painel) { painel = document.createElement('aside'); painel.className = 'inspetor'; main.append(painel); }
+  if (!info) {   // circuito ligado e nada escolhido: o painel de controles
+    const assinatura = `painel:${PLACA}:${m.versao}`;
+    if (painel.dataset.assinatura !== assinatura) {
+      painel.dataset.assinatura = assinatura;
+      painel.className = 'inspetor painel';
+      painel.setAttribute('aria-label', 'Painel do circuito');
+      painel.innerHTML = painelHTML(m);
+    }
+    preencherPainel(m, sim);
+    return;
+  }
+  painel.dataset.assinatura = '';
+  painel.className = 'inspetor';
+  painel.setAttribute('aria-label', 'Inspetor');
   const ref = S.sel.ref || S.sel.nome?.split('.')[0];
   if (ref) info.req = requisitosDa(ref);
-  if (!painel) { painel = document.createElement('aside'); painel.className = 'inspetor'; painel.setAttribute('aria-label', 'Inspetor'); main.append(painel); }
   painel.innerHTML = `
     <div class="cab">
       <div><div class="tipo">${esc(info.tipo)}</div><div class="titulo">${esc(info.titulo)}</div></div>
       <button type="button" class="fechar" data-fechar aria-label="Fechar inspetor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
+    ${info.agora ? `<div class="agora${info.agora.includes('QUEIMA') ? ' queima' : ''}">${esc(info.agora)}</div>` : ''}
+    <div class="explica"><b>O que é isso?</b><p>${esc(info.explica)}</p></div>
     <dl>${info.linhas.map(([k, v, alerta]) => `<dt>${esc(k)}</dt><dd${alerta ? ' class="alerta"' : ''}>${esc(v)}</dd>`).join('')}</dl>
     ${info.linha ? `<div class="origem"><span>Vem de placa.txt, linha ${info.linha}</span><code>${esc(m.linhas[info.linha - 1])}</code></div>` : ''}
-    <div class="explica"><b>O que é isso?</b><p>${esc(info.explica)}</p></div>
     ${info.req ? `<span class="tipo">Requisito: ${esc(info.req)}</span>` : ''}`;
+}
+
+// ---------- painel: mexer na pilha, no resistor e no botao e ver o que acontece ----------
+function porModelo(m, modelo) { return m.pecas.filter(p => p.eletrica?.modelo === modelo); }
+
+function painelHTML(m) {
+  const pilhas = porModelo(m, 'pilha'), chaves = porModelo(m, 'chave'), resistores = porModelo(m, 'resistor'), leds = porModelo(m, 'led');
+  const desliga = '<button type="button" class="fechar" data-ligar aria-label="Desligar o circuito"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button>';
+  return `
+    <div class="cab"><div><div class="tipo">Circuito ligado</div><div class="titulo">Painel</div></div>${desliga}</div>
+    <p class="dica">As bolinhas nas trilhas são a corrente andando. Mexa aqui e veja o que muda.${chaves.length ? ' Clique no botão da placa pra apertar e soltar.' : ''}</p>
+    ${pilhas.map(p => `<label class="controle"><span>${esc(p.ref)} · pilha <b data-txt-pilha="${esc(p.ref)}"></b></span>
+      <input type="range" data-pilha="${esc(p.ref)}" min="${p.eletrica.v_min}" max="${p.eletrica.v_max}" step="0.1" value="${p.eletrica.v}">
+      <span class="faixa"><i>fraca ${volts(p.eletrica.v_min)} V</i><i>nova ${volts(p.eletrica.v_max)} V</i></span></label>`).join('')}
+    ${chaves.length ? `<div class="chaves">${chaves.map(p => `<button type="button" class="pilula" data-chave="${esc(p.ref)}"></button>`).join('')}</div>` : ''}
+    ${resistores.map(p => {
+      const lista = OHMS.includes(p.valor) ? OHMS : [...OHMS, p.valor].sort((a, b) => a - b);
+      return `<label class="controle"><span>${esc(p.ref)} · resistor <b data-txt-resistor="${esc(p.ref)}"></b></span>
+      <input type="range" data-resistor="${esc(p.ref)}" data-lista="${lista.join(',')}" min="0" max="${lista.length - 1}" step="1" value="${lista.indexOf(p.valor)}">
+      <span class="faixa"><i>${ohmsTxt(lista[0])}</i><i>${ohmsTxt(lista[lista.length - 1])}</i></span></label>`;
+    }).join('')}
+    ${leds.map(p => `<div class="leitura"><span>${esc(p.ref)} · LED <b data-led="${esc(p.ref)}"></b></span>
+      <div class="barra"><i class="faixa-b" data-faixa="${esc(p.ref)}"></i><i class="teste" data-teste="${esc(p.ref)}"></i><i class="limite" data-limite="${esc(p.ref)}"></i><i class="marca" data-marca="${esc(p.ref)}"></i></div>
+      <span class="legenda" data-legenda="${esc(p.ref)}"></span></div>`).join('')}
+    ${resistores.map(p => `<div class="leitura"><span>${esc(p.ref)} · esquenta <b data-pot="${esc(p.ref)}"></b></span></div>`).join('')}
+    ${pilhas.map(p => `<div class="leitura"><span>${esc(p.ref)} · gasta <b data-gasto="${esc(p.ref)}"></b></span></div>`).join('')}
+    <p class="formula" data-formula></p>
+    <button type="button" class="link" data-reset>Voltar aos valores da placa</button>`;
+}
+
+function preencherPainel(m, sim) {
+  const q = sel => $('aside.painel ' + sel);
+  const pilhas = porModelo(m, 'pilha');
+  const aj = S.ajustes;
+  const com = v => simular(m, { ...aj, pilha: Object.fromEntries(pilhas.map(p => [p.ref, p.eletrica[v]])) });
+  const fraca = com('v_min'), nova = com('v_max');
+  for (const p of pilhas) {
+    const v = aj.pilha[p.ref] ?? p.eletrica.v;
+    q(`[data-txt-pilha="${p.ref}"]`).textContent = `${volts(v)} V`;
+    const r = q(`[data-pilha="${p.ref}"]`);
+    if (+r.value !== v) r.value = v;
+    const i = sim?.pecas[p.ref]?.i ?? 0;
+    const horas = i > 1e-6 ? p.eletrica.mah / (i * 1000) : null;
+    q(`[data-gasto="${p.ref}"]`).textContent = `${mA(i)} mA${horas && horas < 1e5 ? ` · dura ≈ ${horas < 100 ? horas.toFixed(0) : Math.round(horas / 24) + ' dias ou ' + horas.toFixed(0)} h assim` : ''}`;
+  }
+  for (const p of porModelo(m, 'chave')) {
+    const b = q(`[data-chave="${p.ref}"]`), ap = !!aj.chave[p.ref];
+    b.setAttribute('aria-pressed', ap);
+    b.textContent = `${p.ref} · ${ap ? 'apertado' : 'solto'}`;
+  }
+  for (const p of porModelo(m, 'resistor')) {
+    const ohms = aj.resistor[p.ref] ?? p.valor;
+    q(`[data-txt-resistor="${p.ref}"]`).textContent = ohmsTxt(ohms);
+    const r = q(`[data-resistor="${p.ref}"]`), lista = r.dataset.lista.split(',').map(Number);
+    if (lista[+r.value] !== ohms) r.value = lista.indexOf(ohms);
+    const pw = sim?.pecas[p.ref]?.p ?? 0, max = p.eletrica.potencia_max;
+    const b = q(`[data-pot="${p.ref}"]`);
+    b.textContent = `${mW(pw)} mW de ${mW(max)}${pw > max ? ' · QUEIMA' : ''}`;
+    b.className = pw > max ? 'queima' : 'ok';
+  }
+  for (const p of porModelo(m, 'led')) {
+    const r = sim?.pecas[p.ref], e = p.eletrica, topo = e.i_max * 1.15;
+    const pct = i => `${Math.min(100, Math.max(0, i / topo * 100)).toFixed(1)}%`;
+    const b = q(`[data-led="${p.ref}"]`);
+    if (!r) { b.textContent = '?'; continue; }
+    const est = estadoLed(r);
+    b.textContent = `${mA(r.i)} mA · ${TEXTO_LED[est]}`;
+    b.className = est;
+    const iF = fraca?.pecas[p.ref]?.i ?? 0, iN = nova?.pecas[p.ref]?.i ?? 0;
+    const f = q(`[data-faixa="${p.ref}"]`);
+    f.style.left = pct(Math.min(iF, iN)); f.style.width = `calc(${pct(Math.max(iF, iN))} - ${pct(Math.min(iF, iN))})`;
+    q(`[data-marca="${p.ref}"]`).style.left = pct(r.i);
+    q(`[data-teste="${p.ref}"]`).style.left = pct(e.i_teste);
+    q(`[data-limite="${p.ref}"]`).style.left = pct(e.i_max);
+    q(`[data-legenda="${p.ref}"]`).textContent = `faixa verde: de ${mA(Math.min(iF, iN))} a ${mA(Math.max(iF, iN))} mA entre pilha fraca e nova · risquinho: ${mA(e.i_teste)} mA, onde o datasheet mediu · vermelho: ${mA(e.i_max)} mA, acima disso queima`;
+  }
+  // a conta, quando o circuito e o classico pilha + botao + resistor + LED em serie
+  const leds = porModelo(m, 'led'), resistores = porModelo(m, 'resistor');
+  const formula = q('[data-formula]');
+  if (pilhas.length === 1 && leds.length === 1 && resistores.length === 1 && sim) {
+    const v = aj.pilha[pilhas[0].ref] ?? pilhas[0].eletrica.v, vf = leds[0].eletrica.vf, ohms = aj.resistor[resistores[0].ref] ?? resistores[0].valor;
+    const r = sim.pecas[leds[0].ref];
+    formula.textContent = r.acende
+      ? `corrente = (pilha − LED) ÷ resistor = (${volts(v)} − ${volts(vf)}) ÷ ${ohms} = ${mA(r.i)} mA`
+      : (v <= vf ? `a pilha (${volts(v)} V) não passa dos ${volts(vf)} V que o LED pede: ele fica apagado` : 'o circuito está aberto: a corrente não tem por onde passar');
+  } else formula.textContent = '';
+}
+
+function alternarLigado() {
+  const m = modeloVisto();
+  if (!m?.simulacao?.pode) return;
+  S.ligado = !S.ligado;
+  if (S.ligado) { S.ajustes = { pilha: {}, resistor: {}, chave: {} }; S.sel = null; }
+  desenhar();
 }
 
 // requisitos (do testes.json) que citam essa peca
@@ -480,42 +777,66 @@ function requisitosDa(ref) {
 }
 
 // o que o inspetor mostra pra cada coisa clicada
-function inspecionar(m, sel) {
+function agoraDe(m, ref, sim) {
+  const p = m.pecas.find(q => q.ref === ref), r = sim?.pecas[ref];
+  if (!p?.eletrica || !r) return '';
+  switch (p.eletrica.modelo) {
+    case 'led': return `agora: ${mA(r.i)} mA · ${TEXTO_LED[estadoLed(r)]}`;
+    case 'resistor': return `agora: ${mA(r.i)} mA passando · esquenta ${mW(r.p)} mW de ${mW(p.eletrica.potencia_max)}`;
+    case 'pilha': return `agora: ${volts(r.v)} V · entrega ${mA(r.i)} mA`;
+    case 'chave': return `agora: ${r.apertada ? 'apertado, passando ' + mA(Math.abs(r.i)) + ' mA' : 'solto, não passa nada'}`;
+  }
+  return '';
+}
+
+function inspecionar(m, sel, sim) {
   if (sel.k === 'peca') {
     const p = m.pecas.find(q => q.ref === sel.ref);
     if (!p) return null;
-    const usados = p.pinos.filter(x => x.net && pinosDaNet(m, x.net).length > 1);
-    const ligacao = x => pinosDaNet(m, x.net).filter(n => n !== `${p.ref}.${x.n}`).join(', ') || '—';
-    const linhas = p.pinos.length > 4
-      ? [['Pinos', String(p.pinos.length)], ['Usados', String(usados.length)], ...usados.map(x => [`Pino ${x.n}`, ligacao(x)])]
-      : p.pinos.map(x => [`Pino ${x.n}`, x.net ? ligacao(x) : 'nada ainda']);
+    const outros = x => pinosDaNet(m, x.net).filter(n => n.split('.')[0] !== p.ref).map(n => nomePino(m, n));   // de outras pecas
+    const usados = p.pinos.filter(x => x.net && outros(x).length);
+    const rotulo = x => x.nome ? (p.pinos.filter(y => y.nome === x.nome).length > 1 ? `Lado ${x.nome}` : x.nome) : `Pino ${x.n}`;
+    let linhas;
+    if (p.pinos.length > 4) {
+      linhas = [['Pinos', String(p.pinos.length)], ['Usados', String(usados.length)], ...usados.map(x => [rotulo(x), outros(x).join(', ')])];
+    } else {
+      const vistos = new Set();   // os dois pinos do mesmo lado do botao viram uma linha so
+      linhas = p.pinos.filter(x => !vistos.has(rotulo(x)) && vistos.add(rotulo(x)))
+        .map(x => [rotulo(x), outros(x).join(', ') || 'nada ainda']);
+    }
+    if (p.valor_txt) linhas.push(['Valor', `${p.valor_txt} Ω`]);
     linhas.push(['Posição', `${mm(p.x, 1)}, ${mm(p.y, 1)} mm`]);
     if (p.exemplo) linhas.push(['Medidas', 'de exemplo, sem datasheet', true]);
-    return { tipo: p.nome, titulo: p.ref, linhas, linha: p.linha, explica: p.explica };
+    return { tipo: p.nome, titulo: p.ref, linhas, linha: p.linha, explica: p.explica, agora: agoraDe(m, p.ref, sim) };
   }
   if (sel.k === 'pino') {
     const [ref, n] = sel.nome.split('.');
     const p = m.pecas.find(q => q.ref === ref), pino = pinoDe(m, sel.nome);
     if (!pino) return null;
     const outros = pinosDaNet(m, pino.net).filter(x => x !== sel.nome);
-    const linhas = [['Net', pino.net || '—'], ['Ligado a', outros.join(', ') || 'nada ainda'],
-      ['Furo', pino.furo ? `${mm(pino.furo)} mm (passante)` : 'não (superfície)'], ['Posição', `${mm(pino.x)}, ${mm(pino.y)} mm`]];
     const dentro = (p.juntos || []).filter(par => par.includes(n)).map(par => `${ref}.${par[0] === n ? par[1] : par[0]}`);
-    const fora = outros.filter(x => !dentro.includes(x));
-    let explica = `Pino ${n} de ${ref} (${p.nome}). `;
-    if (dentro.length) explica += `Por dentro da peça ele já é ligado no ${dentro.join(', ')}. `;
+    const fora = outros.filter(x => !dentro.includes(x)).map(x => nomePino(m, x));
+    const linhas = [['Ligado a', fora.join(', ') || 'nada ainda'], ['Net', pino.net || '—'],
+      ['Furo', pino.furo ? `${mm(pino.furo)} mm (passante)` : 'não (superfície)'], ['Posição', `${mm(pino.x)}, ${mm(pino.y)} mm`]];
+    const quem = { '+': 'o positivo', '−': 'o negativo' }[pino.nome];
+    let explica = quem ? `É ${quem} de ${ref} (${p.nome}). ` : `${nomePino(m, sel.nome)}, ${p.nome}. `;
+    if (dentro.length) explica += `Por dentro da peça ele já é ligado no ${dentro.map(x => nomePino(m, x)).join(', ')}, é o mesmo lado. `;
     if (pino.net === 'GND') explica += 'Está no GND, o terra: o 0 V de referência de todo o circuito.';
     else if (!fora.length) explica += dentro.length ? 'Por fora, ainda não vai pra lugar nenhum.' : 'Ainda não está ligado em nada.';
     else explica += `A trilha leva o sinal dele até ${fora.join(', ')}; tudo isso é a mesma net (${pino.net}).`;
-    return { tipo: 'Pino', titulo: sel.nome, linhas, linha: p.linha, explica };
+    let agora = '';
+    if (sim?.nets && pino.net in sim.nets) agora = `agora: ${volts(sim.nets[pino.net])} V neste pino`;
+    return { tipo: `Pino ${n} de ${ref}`, titulo: nomePino(m, sel.nome), linhas, linha: p.linha, explica, agora };
   }
   if (sel.k === 'trilha') {
     const t = m.trilhas[sel.i];
     if (!t) return null;
     const comp = Math.hypot(t.x2 - t.x1, t.y2 - t.y1);
-    return { tipo: 'Trilha', titulo: `${t.de} → ${t.ate}`, linha: t.linha,
+    const i_t = sim ? correnteNaTrilha(m, sim, t) : null;
+    return { tipo: 'Trilha', titulo: `${nomePino(m, t.de)} → ${nomePino(m, t.ate)}`, linha: t.linha,
       linhas: [['Net', t.net], ['Largura', `${mm(t.largura)} mm`], ['Comprimento', `${mm(comp, 1)} mm`]],
-      explica: 'Um caminho de cobre na placa: é o fio que liga um pino no outro. Por enquanto sai sempre em linha reta.' };
+      explica: 'Um caminho de cobre na placa: é o fio que liga um pino no outro. Por enquanto sai sempre em linha reta.',
+      agora: i_t === null ? '' : (Math.abs(i_t) > 1e-6 ? `agora: ${mA(Math.abs(i_t))} mA passando` : 'agora: nada passando') };
   }
   if (sel.k === 'furo') {
     const f = m.furos[sel.i];
@@ -563,11 +884,23 @@ function zoomEm(fator, px, py) {
   aplicarZoom();
 }
 
-function nomeDoAlvo(m, alvo) {
+function nomeDoAlvo(m, alvo, sim) {
   const [k, id] = alvo.split(':');
-  if (k === 'peca') { const p = m.pecas.find(q => q.ref === id); return `${id} · ${p?.nome ?? ''}`; }
-  if (k === 'pino') { const pino = pinoDe(m, id); return pino?.net ? `${id} · ${pino.net}` : id; }
-  if (k === 'trilha') { const t = m.trilhas[+id]; return t ? `trilha ${t.de} → ${t.ate}` : 'trilha'; }
+  if (k === 'peca') {
+    const p = m.pecas.find(q => q.ref === id), agora = agoraDe(m, id, sim).replace('agora: ', '');
+    return `${id} · ${p?.nome ?? ''}${agora ? ' · ' + agora : ''}`;
+  }
+  if (k === 'pino') {
+    const pino = pinoDe(m, id), nome = nomePino(m, id);
+    if (sim?.nets && pino?.net in sim.nets) return `${nome} · ${volts(sim.nets[pino.net])} V`;
+    return pino?.net ? `${nome} · ${pino.net}` : nome;
+  }
+  if (k === 'trilha') {
+    const t = m.trilhas[+id];
+    if (!t) return 'trilha';
+    const i_t = sim ? correnteNaTrilha(m, sim, t) : null;
+    return `trilha ${nomePino(m, t.de)} → ${nomePino(m, t.ate)}${i_t !== null ? ` · ${mA(Math.abs(i_t))} mA` : ''}`;
+  }
   if (k === 'furo') return 'Furo de fixação';
   return 'Placa';
 }
@@ -671,24 +1004,32 @@ function desenharProcesso(main) {
   if (t) {
     const texto = t.rodando ? 'Rodando agora…'
       : falha ? `Parou na etapa ${t.etapas.indexOf(falha) + 1}, ${esc(falha.nome.toLowerCase())}: ${esc(falha.detalhe)}`
-      : `As ${t.etapas.length} etapas passaram: lê o txt, peças, ligações, regras da fábrica, relê o Gerber e tira a foto.`;
+      : `As ${t.etapas.length} etapas passaram: ${t.etapas.map(e => e.nome.toLowerCase()).join(', ')}.`;
     p3 = passo(3, t.rodando ? 'rodando' : falha ? 'falha' : 'ok', 'Testes', `<p>${texto}</p>
       ${!t.rodando && t.resumo ? `<div class="explica"><b>Resumo do Claude</b><p>${esc(t.resumo)}</p></div>` : ''}
       <div class="links"><button type="button" class="link" data-aba="testes">Ver as etapas →</button>${rodar}</div>`);
   }
 
-  let corpo4 = '<p>Ainda não foi gerada.</p>', estado4 = 'pendente';
+  // peças: a fabrica entrega a placa nua, o resto se compra
+  const compras = m?.compras || [];
+  const compravel = compras.length && compras.every(x => x.compra || !x.ref);
+  const p4 = m ? passo(4, compravel ? 'ok' : 'pendente', 'Peças', `
+      <p>A fábrica entrega só a placa nua, sem nada soldado. As peças você compra à parte e solda em casa.${compravel ? '' : ' Esta placa ainda tem peça de exemplo, sem um modelo certo pra comprar.'}</p>
+      <ul class="compras">${compras.map(x => `<li><span class="mono">${esc(x.ref)}</span><b>${esc(x.nome)}</b>${x.valor ? `<span>${esc(x.valor)} Ω</span>` : ''}${x.compra ? `<span class="sub">${esc(x.compra)}</span>` : ''}</li>`).join('')}</ul>`)
+    : passo(4, 'pendente', 'Peças', '<p>Aparece quando a placa for gerada.</p>');
+
+  let corpo5 = '<p>Ainda não foi gerada.</p>', estado5 = 'pendente';
   if (m?.fabrica && !m.fabrica.pronta) {
-    corpo4 = `<p>O <span class="mono">fabrica.zip</span> fica travado enquanto tiver medida de exemplo, sem datasheet: ${esc(m.fabrica.falta_datasheet.join(', '))}.</p>`;
-  } else if (m?.fabrica && (falha || !t)) {
-    corpo4 = '<p>O <span class="mono">fabrica.zip</span> sai quando todos os testes passarem.</p>';
+    corpo5 = `<p>O <span class="mono">fabrica.zip</span> fica travado enquanto tiver medida de exemplo, sem datasheet: ${esc(m.fabrica.falta_datasheet.join(', '))}.</p>`;
+  } else if (m?.fabrica && (falha || !t || t.rodando)) {
+    corpo5 = '<p>O <span class="mono">fabrica.zip</span> sai quando todos os testes passarem.</p>';
   } else if (m?.fabrica) {
-    corpo4 = `<p>O <span class="mono">fabrica.zip</span> está pronto: contorno, cobre de cima e de baixo, máscara, serigrafia e os furos com e sem cobre.</p>
+    corpo5 = `<p>O <span class="mono">fabrica.zip</span> está pronto: contorno, cobre de cima e de baixo, máscara, serigrafia e os furos com e sem cobre.</p>
       <div class="links"><a class="link" href="${BASE}saida/fabrica.zip" download>Baixar fabrica.zip ↓</a></div>`;
   }
   if (c) {
-    estado4 = 'ok';
-    corpo4 += `<div class="cotacao"><dl>
+    estado5 = 'ok';
+    corpo5 += `<div class="cotacao"><dl>
         <dt>Site</dt><dd>${esc(c.site)}</dd><dt>Situação</dt><dd>${esc(c.situacao)}</dd>
         ${c.detectou ? `<dt>A fábrica leu</dt><dd>${esc(c.detectou)}</dd>` : ''}
         ${c.preco ? `<dt>Preço</dt><dd>${esc(c.preco)}</dd>` : ''}
@@ -696,8 +1037,14 @@ function desenharProcesso(main) {
       ${c.imagem ? `<a href="${BASE}${esc(c.imagem)}" target="_blank" rel="noopener"><img src="${BASE}${esc(c.imagem)}" alt="Cotação no site da ${esc(c.site)}"></a>` : ''}
       ${/^https:\/\//.test(c.url || '') ? `<a class="link" href="${esc(c.url)}" target="_blank" rel="noopener">Abrir o site da ${esc(c.site)} ↗</a>` : ''}</div>`;
   }
-  const p4 = passo(4, estado4, 'Fábrica', corpo4);
-  main.innerHTML = `<section class="processo" aria-label="Processo"><ol class="passos">${p1}${p2}${p3}${p4}</ol></section>`;
+  const p5 = passo(5, estado5, 'Fábrica', corpo5);
+  const ordem = m ? [...m.pecas].sort((a, b) => a.corpo.w * a.corpo.h - b.corpo.w * b.corpo.h).map(p => p.ref) : [];
+  const p6 = passo(6, 'pendente', 'Montar e acender', m
+    ? `<p>Quando a placa e as peças chegarem: solde do menor pro maior (${esc(ordem.join(', '))}), ponha a pilha e aperte o botão. Antes disso, dá pra ensaiar no ▶ da aba Projeto.</p>`
+    : '<p>Depois da fábrica.</p>');
+  main.innerHTML = `<section class="processo" aria-label="Processo">
+    <p class="caminho">O caminho de toda placa: dizer o que ela faz → desenhar → testar no papel → comprar as peças → fabricar → montar e acender.</p>
+    <ol class="passos">${p1}${p2}${p3}${p4}${p5}${p6}</ol></section>`;
 }
 
 // ---------- aba Thinking ----------
@@ -708,7 +1055,7 @@ function desenharThinking(main) {
     const classe = i.status === 'ok' ? 'ok' : i.status === 'falha' ? 'falha' : '';
     const detalhes = S.detalhado ? `<ul>
         ${i.detalhes.map(d => `<li>${esc(d)}</li>`).join('')}
-        ${(i.verifica || []).map(v => `<li class="checa${v.ok === false ? ' nao' : ''}">${v.ok ? '✓' : v.ok === false ? '✗' : '·'} ${esc(v.texto)}</li>`).join('')}
+        ${(i.verifica || []).map(v => `<li class="checa${v.ok === false ? ' nao' : ''}">${v.ok ? '✓' : v.ok === false ? '✗' : '·'} ${esc(traduz(S.modelo, v.texto))}</li>`).join('')}
       </ul>` : '';
     const primeira = i.pecas.find(r => S.modelo?.pecas.some(p => p.ref === r));
     return `<div class="galho"><article class="req ${classe}">
@@ -734,7 +1081,7 @@ function desenharThinking(main) {
 }
 
 // ---------- aba Testes ----------
-const ESTADOS = { ok: ['✓', 'ok'], rodando: ['…', 'rodando'], falhou: ['✗', 'falhou'], nao_rodou: ['·', 'não rodou'], aguardando: ['·', 'aguardando'] };
+const ESTADOS = { ok: ['✓', 'ok'], rodando: ['…', 'rodando'], falhou: ['✗', 'falhou'], pulou: ['–', 'pulou'], nao_rodou: ['·', 'não rodou'], aguardando: ['·', 'aguardando'] };
 
 function hora(iso) { return iso ? iso.slice(11, 16) : ''; }
 
@@ -745,11 +1092,11 @@ function desenharTestes(main) {
   const m = S.modelo;
   const erros = falha ? (falha.rotulos || {}) : {};
   const quando = t.rodando ? `começou ${hora(t.inicio)}` : `rodou ${hora(t.fim || t.inicio)}`;
-  const fotoOk = t.etapas[5]?.estado === 'ok';
+  const fotoOk = t.etapas.find(e => e.nome === 'Tira foto da placa')?.estado === 'ok';
 
   const etapas = t.etapas.map(e => {
     const [icone, texto] = ESTADOS[e.estado] || ESTADOS.aguardando;
-    let detalhe = e.estado === 'ok' || e.estado === 'falhou' ? e.detalhe : '';
+    let detalhe = ['ok', 'falhou', 'pulou'].includes(e.estado) ? traduz(m, e.detalhe) : '';
     if (e.estado === 'falhou' && e.requisitos?.length) detalhe += ` · requisitos ${e.requisitos.join(', ')}`;
     return `<li class="etapa ${esc(e.estado)}">
       <span class="bola" aria-hidden="true">${icone}</span>
@@ -834,6 +1181,13 @@ document.addEventListener('click', async e => {
     return;
   }
   if (b.dataset.abrir) { S.ver = null; S.cx = null; return irPara('projeto', { k: 'peca', ref: b.dataset.abrir }); }
+  if ('ligar' in b.dataset) return alternarLigado();
+  if (b.dataset.chave) { S.ajustes.chave[b.dataset.chave] = !S.ajustes.chave[b.dataset.chave]; return desenhar(); }
+  if ('reset' in b.dataset) { S.ajustes = { pilha: {}, resistor: {}, chave: {} }; return desenhar(); }
+  if (S.ligado && S.modo === 'seta' && b.dataset.alvo?.startsWith('peca:')) {   // ligado, clicar no botao e apertar
+    const ref = b.dataset.alvo.slice(5), p = modeloVisto()?.pecas.find(q => q.ref === ref);
+    if (p?.eletrica?.modelo === 'chave') { S.ajustes.chave[ref] = !S.ajustes.chave[ref]; return desenhar(); }
+  }
   if (b.dataset.detalhado) { S.detalhado = b.dataset.detalhado === '1'; return desenhar(); }
   if (b.dataset.modo) { S.modo = b.dataset.modo; return desenhar(); }
   if (b.dataset.zoom) return zoomEm(+b.dataset.zoom);
@@ -843,6 +1197,14 @@ document.addEventListener('click', async e => {
     S.sel = selecaoDoAlvo(b.dataset.alvo);
     return desenhar();
   }
+});
+
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (el.dataset.pilha) S.ajustes.pilha[el.dataset.pilha] = +el.value;
+  else if (el.dataset.resistor) S.ajustes.resistor[el.dataset.resistor] = el.dataset.lista.split(',').map(Number)[+el.value];
+  else return;
+  desenhar();
 });
 
 document.addEventListener('mousedown', e => {
@@ -877,7 +1239,8 @@ document.addEventListener('mousemove', e => {
   hud.hidden = false;
   hud.style.left = (e.clientX - r.left + 18) + 'px';
   hud.style.top = (e.clientY - r.top + 18) + 'px';
-  hud.querySelector('.nome-hud').textContent = nomeDoAlvo(m, alvo || 'placa');
+  const simHud = S.ligado && m.simulacao?.pode ? simular(m, S.ajustes) : null;
+  hud.querySelector('.nome-hud').textContent = nomeDoAlvo(m, alvo || 'placa', simHud);
   hud.querySelector('.xy').textContent = `x ${mm(pt.x, 1)}  y ${mm(m.placa.h - pt.y, 1)} mm`;
 });
 
@@ -904,6 +1267,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '+' || e.key === '=') zoomEm(1.25);
   if (e.key === '-') zoomEm(0.8);
   if (e.key === '0') { centralizar(); aplicarZoom(); }
+  if (e.key === 'l') alternarLigado();
 });
 
 window.addEventListener('resize', aplicarZoom);
@@ -914,7 +1278,7 @@ if (PLACA) {
   setInterval(atualizar, 1000);
 } else {   // tela de projetos: some com as abas e relê a lista de vez em quando
   for (const id of ['voltar', 'abas', 'direita']) $('#' + id).hidden = true;
-  document.title = 'Bancada de placas';
+  document.title = 'Chassi';
   desenharInicio();
   setInterval(desenharInicio, 5000);
 }
