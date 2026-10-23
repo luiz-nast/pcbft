@@ -29,7 +29,7 @@ BIBLIOTECA = {
     "led": {
         "nome": "LED",
         "nomes": {"1": "+", "2": "−"},
-        "explica": "Acende quando a corrente passa por ele. Tem lado certo: o pino 1 é o + (ânodo), o 2 é o − (cátodo).",
+        "explica": "Acende quando a corrente passa por ele. Tem lado certo: entra pelo + (a perna comprida) e sai pelo −.",
         "fonte": None,
         "furo": None,
         "corpo": (3.2, 1.8),
@@ -38,7 +38,7 @@ BIBLIOTECA = {
     "botao": {
         "nome": "Botão",
         "nomes": {"1": "A", "2": "A", "3": "B", "4": "B"},
-        "explica": "Quando você aperta, ele junta os dois lados do circuito. Os pinos 1 e 2 são o mesmo lado; 3 e 4, o outro.",
+        "explica": "Quando você aperta, ele junta os dois lados do circuito. Tem o lado A (dois pinos) e o lado B (os outros dois).",
         "fonte": None,
         "furo": 1.0,
         "corpo": (6.0, 6.0),
@@ -49,7 +49,7 @@ BIBLIOTECA = {
     "buzzer": {
         "nome": "Buzzer",
         "nomes": {"1": "+", "2": "−"},
-        "explica": "Faz som quando recebe sinal. O pino 1 é o +.",
+        "explica": "Faz som quando recebe sinal. Tem lado certo: o + e o −.",
         "fonte": None,
         "furo": 0.9,
         "corpo": (12.0, 12.0),
@@ -76,8 +76,8 @@ KICAD = "https://gitlab.com/kicad/libraries/kicad-footprints/-/raw/master/"
 BIBLIOTECA.update({
     "resistor_axial": {
         "nome": "Resistor 1/4 W (axial)",
-        "explica": "Freia a corrente. É o cilindrinho com faixas coloridas que dizem o valor em ohms. "
-                   "Fica deitado, com as perninhas dobradas nos furos a 10,16 mm. Não tem lado certo.",
+        "explica": "Freia a corrente: quanto mais ohms, menos corrente passa. É o cilindrinho com faixas coloridas que dizem o valor. "
+                   "Fica deitado, com as perninhas dobradas nos furos. Não tem lado certo.",
         "fonte": "Yageo CFR-25 https://cdn.sparkfun.com/assets/a/9/3/0/e/yageo-cfr_datasheet.pdf; "
                  + KICAD + "Resistor_THT.pretty/R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal.kicad_mod",
         "furo": 0.8,
@@ -89,8 +89,8 @@ BIBLIOTECA.update({
     },
     "led_5mm": {
         "nome": "LED vermelho 5 mm",
-        "explica": "Uma luzinha que só acende com a corrente no sentido certo: entra pelo pino 1 (ânodo, perna comprida) "
-                   "e sai pelo 2 (cátodo, perna curta, lado chato, pad quadrado). Sempre com resistor em série.",
+        "explica": "Uma luzinha que só acende com a corrente no sentido certo: entra pelo + (a perna comprida) "
+                   "e sai pelo − (a perna curta, do lado chato; na placa é o pad quadrado). Sempre com um resistor na frente.",
         "fonte": "Kingbright WP7113ID https://www.kingbrightusa.com/images/catalog/SPEC/WP7113ID.pdf; "
                  + KICAD + "LED_THT.pretty/LED_D5.0mm.kicad_mod (nosso 1 = pad 2 do KiCad, nosso 2 = pad 1)",
         "furo": 0.9,
@@ -98,14 +98,15 @@ BIBLIOTECA.update({
         "redondo": True,
         "pinos": {"1": (1.27, 0, 1.8), "2": (-1.27, 0, (1.8, 1.8))},
         "nomes": {"1": "+", "2": "−"},
-        # Kingbright WP7113ID: VF 1,9 V típica (2,3 máx) medida a 10 mA; IF máxima contínua 30 mA
-        "eletrica": {"modelo": "led", "vf": 1.9, "vf_max": 2.3, "i_teste": 0.010, "i_max": 0.030},
+        # Kingbright WP7113ID: VF 1,9 V típica (2,3 máx) medida a 10 mA; IF máxima contínua 30 mA.
+        # r_s = inclinação estimada entre esses dois pontos: (2,3 − 1,9) / (0,030 − 0,010) = 20 Ω
+        "eletrica": {"modelo": "led", "vf": 1.9, "vf_max": 2.3, "i_teste": 0.010, "i_max": 0.030, "r_s": 20},
         "compra": "Kingbright WP7113ID (ou qualquer LED vermelho de 5 mm)",
     },
     "botao_6x6": {
         "nome": "Botão 6×6 mm",
-        "explica": "Apertou, liga; soltou, desliga. Os pinos 1 e 2 são o mesmo lado (ligados por dentro), "
-                   "3 e 4 o outro lado. O botão só faz alguma coisa se cada lado for pra um lugar diferente.",
+        "explica": "Apertou, liga; soltou, desliga. Tem o lado A (dois pinos, ligados por dentro) e o lado B (os outros dois). "
+                   "Só faz alguma coisa se cada lado for pra um lugar diferente.",
         "fonte": "Omron B3F-1000 https://omronfs.omron.com/en_US/ecb/products/pdf/en-b3f.pdf; "
                  + KICAD + "Button_Switch_THT.pretty/SW_PUSH_6mm.kicad_mod",
         "furo": 1.1,
@@ -119,8 +120,8 @@ BIBLIOTECA.update({
     },
     "pilha_cr2032": {
         "nome": "Suporte de pilha CR2032",
-        "explica": "Segura uma pilha moeda CR2032 de 3 V. O pino 1 (pad quadrado, na aba) é o +; "
-                   "o pino 2, embaixo da pilha, é o −, que vira o GND da placa.",
+        "explica": "Segura uma pilha moeda CR2032 de 3 V. O + fica na aba (pad quadrado); "
+                   "o −, embaixo da pilha, é o GND da placa, o 0 V de referência.",
         "fonte": "Keystone 103 https://www.keyelco.com/userAssets/file/M65p3.pdf; "
                  + KICAD + "Battery.pretty/BatteryHolder_Keystone_103_1x20mm.kicad_mod",
         "furo": 1.5,

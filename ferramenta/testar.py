@@ -81,7 +81,7 @@ def cobres(modelo):
                 w, h = p["pad"]["w"] / 2, p["pad"]["h"] / 2
                 lista.append((nome, net, ("ret", p["x"] - w, p["y"] - h, p["x"] + w, p["y"] + h), 0))
     for t in modelo["trilhas"]:
-        nome = f"trilha {t['de']}–{t['ate']}"
+        nome = f"trilha {t['de']} → {t['ate']}"
         lista.append((nome, t["net"], ("seg", (t["x1"], t["y1"]), (t["x2"], t["y2"])), t["largura"] / 2))
     return lista
 
@@ -214,6 +214,12 @@ def confere_ligacoes(ctx):
         elif len(peca["pinos"]) == 2 and len(usados) == 1:
             livre = next(p["n"] for p in peca["pinos"] if p not in usados)
             solto.append(f"{peca['ref']}.{livre}")
+        elif len(peca["pinos"]) <= 4:   # peca pequena com um lado sem net (ex: so um lado do botao ligado)
+            lados = set()
+            for p in peca["pinos"]:
+                if p["net"] is None and (p["nome"] or p["n"]) not in lados:
+                    lados.add(p["nome"] or p["n"])
+                    solto.append(f"{peca['ref']}.{p['n']}")
     if sem:
         raise Falhou(f"{' e '.join(sem)} sem ligação", sem, "sem ligação")
     if solto:
@@ -230,7 +236,7 @@ def confere_ligacoes(ctx):
     curtos = pares_perto(modelo, 0)
     if curtos:
         _, a, b = curtos[0]
-        raise Falhou(f"curto: {a} encosta em {b}" + (f" (+{len(curtos) - 1})" if len(curtos) > 1 else ""),
+        raise Falhou(f"curto: {a} encosta em {b}" + (f" (e mais {len(curtos) - 1})" if len(curtos) > 1 else ""),
                      refs(a, b), "curto")
     return f"{len(modelo['trilhas'])} ligações, nenhum pino solto, nenhum curto"
 
@@ -245,29 +251,33 @@ def liga_circuito(ctx):
         if sim["sem_valor"]:
             motivo.append("sem o valor em ohms no placa.txt: " + ", ".join(sim["sem_valor"]))
         raise Pulou("não dá pra ligar no papel ainda · " + " · ".join(motivo))
-    nominal, fraca, nova = ligar(modelo, "v"), ligar(modelo, "v_min"), ligar(modelo, "v_max")
+    try:
+        nominal, fraca, nova = ligar(modelo, "v"), ligar(modelo, "v_min"), ligar(modelo, "v_max")
+    except (ZeroDivisionError, KeyError) as e:
+        raise Falhou(f"não consegui resolver o circuito: {e}")
     if nominal is None:
         raise Pulou("sem pilha na placa, nada pra ligar")
+    ctx["sim"] = {"nominal": nominal, "nova": nova}   # as checagens acende/nao_queima usam isto
     problemas, frases = [], []
     for p in modelo["pecas"]:
         e, ref = p["eletrica"], p["ref"]
         r_nom, r_fraca, r_nova = nominal["pecas"][ref], fraca["pecas"][ref], nova["pecas"][ref]
         if e["modelo"] == "led":
             if r_nova["i"] > e["i_max"]:
-                problemas.append((f"{ref} recebe {ma(r_nova['i'])} mA com a pilha nova (máximo {ma(e['i_max'])})", [ref], "queima"))
-            frases.append(f"{ref}: {ma(r_nom['i'])} mA ({ma(r_fraca['i'])} a {ma(r_nova['i'])} entre pilha fraca e nova; máximo {ma(e['i_max'])})")
+                problemas.append((f"{ref} queima: recebe {ma(r_nova['i'])} mA com a pilha nova, o limite é {ma(e['i_max'])} mA", [ref], "queima"))
+            frases.append(f"{ref}: {ma(r_nom['i'])} mA (de {ma(r_fraca['i'])} a {ma(r_nova['i'])} mA entre pilha fraca e nova; o limite é {ma(e['i_max'])} mA)")
         elif e["modelo"] == "resistor":
             if r_nova["p"] > e["potencia_max"]:
-                problemas.append((f"{ref} esquenta {mw(r_nova['p'])} mW (aguenta {mw(e['potencia_max'])})", [ref], "esquenta"))
-            frases.append(f"{ref}: {mw(r_nova['p'])} mW de {mw(e['potencia_max'])}")
+                problemas.append((f"{ref} esquenta demais: {mw(r_nova['p'])} mW, aguenta {mw(e['potencia_max'])} mW", [ref], "esquenta"))
+            frases.append(f"{ref}: esquenta {mw(r_nova['p'])} mW, aguenta {mw(e['potencia_max'])} mW")
         elif e["modelo"] == "chave" and e.get("i_max") and abs(r_nova["i"]) > e["i_max"]:
-            problemas.append((f"{ref} passa {ma(abs(r_nova['i']))} mA (máximo {ma(e['i_max'])})", [ref], "corrente alta"))
+            problemas.append((f"{ref} passa {ma(abs(r_nova['i']))} mA, o limite dele é {ma(e['i_max'])} mA", [ref], "corrente alta"))
         elif e["modelo"] == "pilha":
             horas = e["mah"] / (r_nom["i"] * 1000) if r_nom["i"] > 1e-6 else None
             frases.append(f"{ref}: {ma(r_nom['i'])} mA" + (f", dura ≈ {horas:.0f} h apertado" if horas and horas < 1e5 else ""))
     if problemas:
-        raise Falhou(problemas[0][0] + (f" (+{len(problemas) - 1})" if len(problemas) > 1 else ""),
-                     rotulos={ref: rot for _, onde, rot in problemas for ref in onde})
+        problemas.sort(key=lambda p: p[2] != "queima")   # o LED queimando e o que importa, vem primeiro
+        raise Falhou(" · ".join(p[0] for p in problemas), rotulos={ref: rot for _, onde, rot in problemas for ref in onde})
     return " · ".join(frases)
 
 
@@ -323,7 +333,7 @@ def regras_fabrica(ctx):
     if min(gerar.SILK, gerar.LETRA_LINHA) < SILK_MIN or gerar.LETRA < LETRA_MIN:
         problemas.append((f"serigrafia fina demais (linha {mm(SILK_MIN)} e letra {mm(LETRA_MIN)} mm no mínimo)", [], ""))
     if problemas:
-        mais = f" (+{len(problemas) - 1})" if len(problemas) > 1 else ""
+        mais = f" (e mais {len(problemas) - 1})" if len(problemas) > 1 else ""
         rotulos = {}
         for _, onde, rotulo in problemas:
             for ref in onde:
@@ -433,14 +443,16 @@ def checar(texto, modelo, sim):
     if cmd == "separado":   # nao pode ser a mesma net (ex: os dois lados de um botao)
         return not nets(a[0]) & nets(a[1])
     if cmd in ("acende", "nao_queima"):   # com as chaves apertadas: acende na pilha nominal, nao queima na nova
-        if not sim or a[0] not in sim["nominal"]["pecas"]:
+        r = (sim or {}).get("nominal", {}).get("pecas", {}).get(a[0])
+        if not r or "acende" not in r:   # sem simulacao, ou a peca nao e LED
             return None
-        return sim["nominal"]["pecas"][a[0]]["acende"] if cmd == "acende" else not sim["nova"]["pecas"][a[0]]["queima"]
+        return r["acende"] if cmd == "acende" else not sim["nova"]["pecas"][a[0]]["queima"]
     if cmd == "sem_pino_solto":   # cada pino chega em alguma OUTRA peca (o par interno do botao nao conta)
         return a[0] in pecas and all(q["net"] and pecas_da_net[q["net"]] - {a[0]} for q in pecas[a[0]]["pinos"])
 
 
-def avaliar_requisitos(pasta, modelo):
+def avaliar_requisitos(pasta, modelo, sim=None):
+    """sim = o resultado da etapa 4 (so existe se ela passou); sem ele, acende/nao_queima ficam em '?'"""
     arq = pasta / "requisitos.md"
     if not arq.exists():
         return None
@@ -448,11 +460,6 @@ def avaliar_requisitos(pasta, modelo):
         obj = ler_requisitos(arq.read_text())
     except gerar.ErroTxt as e:
         return {"titulo": "", "texto": "", "itens": [], "erro": f"requisitos.md, linha {e.linha}: {e.msg}"}
-    sim = None
-    if modelo is not None and modelo["simulacao"]["pode"]:
-        sim = {"nominal": ligar(modelo, "v"), "nova": ligar(modelo, "v_max")}
-        if sim["nominal"] is None:
-            sim = None
     for item in obj["itens"]:
         if modelo is None:
             item.update(status="?", motivo="a placa não montou")
@@ -487,10 +494,21 @@ def rodar(pasta, frase=None):
     estado = {"versao": None, "rodando": True, "inicio": datetime.now().isoformat(timespec="seconds"),
               "etapas": [{"nome": n, "estado": "aguardando", "detalhe": ""} for n in ETAPAS],
               "requisitos": {}, "resumo": ""}
-    ctx = {"pasta": pasta, "frase": frase, "estado": estado}
+    ctx = {"pasta": pasta, "frase": frase, "estado": estado, "anterior": anterior}
     (pasta / "saida" / "fabrica.zip").unlink(missing_ok=True)
     salvar(arq, estado)
     funcoes = [le_txt, confere_pecas, confere_ligacoes, liga_circuito, regras_fabrica, rele_gerber, tira_foto]
+    try:
+        rodar_etapas(ctx, funcoes, arq)
+    finally:   # aconteca o que acontecer, o testes.json nunca fica "rodando" pra sempre
+        estado["rodando"] = False
+        estado["fim"] = datetime.now().isoformat(timespec="seconds")
+        salvar(arq, estado)
+    return estado
+
+
+def rodar_etapas(ctx, funcoes, arq):
+    estado, pasta = ctx["estado"], ctx["pasta"]
     for etapa, funcao in zip(estado["etapas"], funcoes):
         etapa["estado"] = "rodando"
         salvar(arq, estado)
@@ -515,19 +533,18 @@ def rodar(pasta, frase=None):
     tudo_ok = all(e["estado"] in ("ok", "pulou") for e in estado["etapas"])
     if tudo_ok and ctx["modelo"]["fabrica"]["pronta"]:
         gerar.zipar(pasta / "saida", ctx["arquivos"])   # fabrica.zip so existe se passou em tudo
-    objetivo = avaliar_requisitos(pasta, ctx.get("modelo"))
+    try:
+        objetivo = avaliar_requisitos(pasta, ctx.get("modelo"), ctx.get("sim"))
+    except Exception as e:   # requisito nao pode derrubar a rodada inteira
+        objetivo = {"titulo": "", "texto": "", "itens": [], "erro": f"requisitos: erro inesperado: {e!r}"}
     if objetivo:
         estado["objetivo"] = objetivo
         estado["requisitos"] = {i["id"]: i["status"] for i in objetivo["itens"]}
         for etapa in estado["etapas"]:
             if etapa.get("onde"):
                 etapa["requisitos"] = [i["id"] for i in objetivo["itens"] if set(i["pecas"]) & set(etapa["onde"])]
-    if anterior.get("resumo") and anterior.get("versao") == estado["versao"]:
-        estado["resumo"] = anterior["resumo"]   # a placa nao mudou, o resumo do Claude continua valendo
-    estado["rodando"] = False
-    estado["fim"] = datetime.now().isoformat(timespec="seconds")
-    salvar(arq, estado)
-    return estado
+    if ctx["anterior"].get("resumo") and ctx["anterior"].get("versao") == estado["versao"]:
+        estado["resumo"] = ctx["anterior"]["resumo"]   # a placa nao mudou, o resumo do Claude continua valendo
 
 
 def escrever_resumo(pasta, texto):

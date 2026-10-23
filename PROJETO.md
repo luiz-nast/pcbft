@@ -176,7 +176,7 @@ Sete etapas, em ordem. Para na primeira que falhar. Uma etapa pode **pular** (n�
 1. **Lê o txt**: sintaxe, comandos conhecidos.
 2. **Confere peças**: todo TIPO existe na biblioteca.
 3. **Confere ligações**: peça sem ligação, pino solto, net partida, peça de 2 pinos em curto, curto (duas nets diferentes encostando).
-4. **Liga o circuito**: `circuito.py` resolve a corrente contínua com os botões apertados, pra pilha fraca, nominal e nova. Falha se algum LED passa da corrente máxima ou algum resistor da potência (números do datasheet). Pula se alguma peça não tem modelo elétrico ou resistor sem valor.
+4. **Liga o circuito**: `circuito.py` resolve a corrente contínua (análise nodal; LED = joelho + resistência em série tirados do datasheet) com os botões apertados, pra pilha fraca, nominal e nova. Falha se algum LED passa da corrente máxima ou algum resistor da potência (números do datasheet). Pula se alguma peça não tem modelo elétrico ou resistor sem valor.
 5. **Regras da fábrica**: trilha, espaço, furo, anel, borda, máscara, serigrafia (números da página da JLCPCB, com link no código).
 6. **Relê o Gerber**: abre os arquivos gerados com um leitor independente (`gerbonara`) e confere que lê sem aviso.
 7. **Tira foto da placa**: renderiza `foto.png` pra o Claude olhar.

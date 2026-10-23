@@ -2,15 +2,23 @@
 
 O mesmo modelo existe em JS na bancada (funcao simular), pro painel responder na hora. Mudou aqui, muda lá.
 - resistor: I = V / R
-- LED: conduz com uma queda fixa vf (do datasheet); abaixo disso não passa nada
+- LED aceso: V = joelho + r_s · I (joelho = vf − r_s · i_teste, do datasheet); abaixo do joelho não passa nada
 - chave: apertada vira fio; solta, fica aberta
-- pilha: fonte de tensão ideal, do − pro +
+- pilha: fonte de tensão com uma resistência bem pequena em série (R_PILHA): não é a resistência interna de
+  verdade (o datasheet não dá), é só pra conta fechar com duas pilhas em paralelo
+- pino sem net = circuito aberto
 
-A conta é análise nodal: uma incógnita por net (tensão) e uma por fonte de tensão (corrente).
+A conta é análise nodal: uma incógnita por net (tensão). Fonte com resistência em série entra como
+condutância + corrente injetada (Norton), então a matriz nunca fica sem solução.
 """
 
 GMIN = 1e-9      # condutância mínima de cada net pro terra, só pra net solta não travar a conta
 R_CHAVE = 1e-3   # chave apertada = resistor bem pequeno
+R_PILHA = 1e-3   # ver docstring
+
+
+def joelho(e):
+    return e["vf"] - e["r_s"] * e["i_teste"]
 
 
 def resolver_linear(A, b):
@@ -31,7 +39,8 @@ def resolver_linear(A, b):
 
 def resolver(modelo, ajustes=None):
     """ajustes: {"pilha": {ref: volts}, "resistor": {ref: ohms}, "chave": {ref: True = apertada}}
-    devolve {"nets": {net: V}, "pecas": {ref: {...}}, "entra": {"REF.N": corrente que entra pelo pino}}"""
+    devolve {"nets": {net: V}, "pecas": {ref: {...}}, "entra": {"REF.N": corrente que entra pelo pino}}
+    ou None quando não tem pilha."""
     aj = {"pilha": {}, "resistor": {}, "chave": {}, **(ajustes or {})}
     pecas = [p for p in modelo["pecas"] if p.get("eletrica")]
     net_de = {(p["ref"], q["n"]): q["net"] for p in modelo["pecas"] for q in p["pinos"]}
@@ -45,29 +54,37 @@ def resolver(modelo, ajustes=None):
     def net(ref, n):
         return net_de[(ref, n)]
 
-    # fontes de tensão: pilhas sempre; LED só quando aceso (a gente vai acertando quais acendem)
+    def tensao(v, a, b):
+        return v[a] - v[b] if a is not None and b is not None else None
+
     acesos = {p["ref"]: True for p in pecas if p["eletrica"]["modelo"] == "led"}
-    for _ in range(20):
-        fontes = []   # (ref, net_mais, net_menos, volts)
-        for p in pilhas:
-            e = p["eletrica"]
-            fontes.append((p["ref"], net(p["ref"], e["mais"]), net(p["ref"], e["menos"]), aj["pilha"].get(p["ref"], e["v"])))
-        for p in pecas:
-            if p["eletrica"]["modelo"] == "led" and acesos[p["ref"]]:
-                fontes.append((p["ref"], net(p["ref"], "1"), net(p["ref"], "2"), p["eletrica"]["vf"]))
-        N, M = len(nets), len(fontes)
-        A = [[0.0] * (N + M) for _ in range(N + M)]
-        b = [0.0] * (N + M)
+    v = {}
+    for _ in range(30):
+        N = len(nets)
+        A = [[0.0] * N for _ in range(N)]
+        b = [0.0] * N
         for i in range(N):
             A[i][i] += GMIN
 
         def condutancia(na, nb, g):
-            for x, sx in ((na, 1), (nb, -1)):
+            if na is None or nb is None:   # pino sem net: aberto
+                return
+            for x, outro in ((na, nb), (nb, na)):
                 if x == terra:
                     continue
                 A[idx[x]][idx[x]] += g
-                if na != terra and nb != terra:
-                    A[idx[x]][idx[nb if x == na else na]] -= g
+                if outro != terra:
+                    A[idx[x]][idx[outro]] -= g
+
+        def fonte(na, nb, volts, r):   # fonte de tensão com r em série, + em na: Norton
+            if na is None or nb is None:
+                return
+            g = 1 / r
+            condutancia(na, nb, g)
+            if na != terra:
+                b[idx[na]] += g * volts
+            if nb != terra:
+                b[idx[nb]] -= g * volts
 
         for p in pecas:
             e, ref = p["eletrica"], p["ref"]
@@ -75,27 +92,26 @@ def resolver(modelo, ajustes=None):
                 condutancia(net(ref, "1"), net(ref, "2"), 1 / aj["resistor"].get(ref, p["valor"]))
             elif e["modelo"] == "chave" and aj["chave"].get(ref, False):
                 condutancia(net(ref, e["lados"][0][0]), net(ref, e["lados"][1][0]), 1 / R_CHAVE)
-        for k, (ref, mais, menos, volts) in enumerate(fontes):
-            # corrente I_k anda do + pro − por dentro da fonte (convenção de carga)
-            for x, s in ((mais, 1), (menos, -1)):
-                if x != terra:
-                    A[idx[x]][N + k] += s
-                    A[N + k][idx[x]] += s
-            b[N + k] = volts
+            elif e["modelo"] == "pilha":
+                fonte(net(ref, e["mais"]), net(ref, e["menos"]), aj["pilha"].get(ref, e["v"]), R_PILHA)
+            elif e["modelo"] == "led" and acesos[ref]:
+                fonte(net(ref, "1"), net(ref, "2"), joelho(e), e["r_s"])
         x = resolver_linear(A, b)
         v = {n: x[idx[n]] for n in nets}
         v[terra] = 0.0
-        i_fonte = {ref: x[N + k] for k, (ref, *_) in enumerate(fontes)}
 
-        # LED aceso puxando corrente pra trás apaga; LED apagado com tensão acima de vf acende
+        # LED aceso puxando corrente pra trás apaga; LED apagado com tensão acima do joelho acende
         mudou = False
         for p in pecas:
             if p["eletrica"]["modelo"] != "led":
                 continue
-            ref = p["ref"]
-            if acesos[ref] and i_fonte[ref] < -1e-12:
+            ref, e = p["ref"], p["eletrica"]
+            vab = tensao(v, net(ref, "1"), net(ref, "2"))
+            if vab is None:
+                acesos[ref] = False
+            elif acesos[ref] and vab < joelho(e) - 1e-9:
                 acesos[ref], mudou = False, True
-            elif not acesos[ref] and v[net(ref, "1")] - v[net(ref, "2")] > p["eletrica"]["vf"] + 1e-9:
+            elif not acesos[ref] and vab > joelho(e) + 1e-9:
                 acesos[ref], mudou = True, True
         if not mudou:
             break
@@ -105,21 +121,26 @@ def resolver(modelo, ajustes=None):
         e, ref = p["eletrica"], p["ref"]
         if e["modelo"] == "resistor":
             ohms = aj["resistor"].get(ref, p["valor"])
-            i = (v[net(ref, "1")] - v[net(ref, "2")]) / ohms
+            vab = tensao(v, net(ref, "1"), net(ref, "2"))
+            i = vab / ohms if vab is not None else 0.0
             saida[ref] = {"i": i, "p": i * i * ohms, "ohms": ohms}
             entra[f"{ref}.1"], entra[f"{ref}.2"] = i, -i
         elif e["modelo"] == "led":
-            i = max(i_fonte.get(ref, 0.0), 0.0) if acesos[ref] else 0.0
-            saida[ref] = {"i": i, "acende": i >= 0.001, "forte": i > (e["i_teste"] + e["i_max"]) / 2, "queima": i > e["i_max"]}
+            vab = tensao(v, net(ref, "1"), net(ref, "2"))
+            i = max((vab - joelho(e)) / e["r_s"], 0.0) if acesos[ref] and vab is not None else 0.0
+            saida[ref] = {"i": i, "v": joelho(e) + e["r_s"] * i if i > 0 else (vab or 0.0),
+                          "acende": i >= 0.001, "forte": i > (e["i_teste"] + e["i_max"]) / 2, "queima": i > e["i_max"]}
             entra[f"{ref}.1"], entra[f"{ref}.2"] = i, -i
         elif e["modelo"] == "pilha":
-            i = -i_fonte[ref]   # a pilha empurra corrente pra fora do +
-            saida[ref] = {"i": i, "v": aj["pilha"].get(ref, e["v"])}
+            volts = aj["pilha"].get(ref, e["v"])
+            vab = tensao(v, net(ref, e["mais"]), net(ref, e["menos"]))
+            i = (volts - vab) / R_PILHA if vab is not None else 0.0   # corrente que sai do +
+            saida[ref] = {"i": i, "v": volts}
             entra[f"{ref}.{e['mais']}"], entra[f"{ref}.{e['menos']}"] = -i, i
         elif e["modelo"] == "chave":
             apertada = aj["chave"].get(ref, False)
-            a, bb = net(ref, e["lados"][0][0]), net(ref, e["lados"][1][0])
-            i = (v[a] - v[bb]) / R_CHAVE if apertada else 0.0
+            vab = tensao(v, net(ref, e["lados"][0][0]), net(ref, e["lados"][1][0]))
+            i = vab / R_CHAVE if apertada and vab is not None else 0.0
             saida[ref] = {"i": i, "apertada": apertada}
             for n in e["lados"][0]:
                 entra[f"{ref}.{n}"] = i

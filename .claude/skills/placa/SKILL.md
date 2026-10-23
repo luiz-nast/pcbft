@@ -27,7 +27,7 @@ O Claude decide só a **intenção** (quais peças, onde, o que liga em quê). C
 
 ## Simulador
 
-`ferramenta/circuito.py` (etapa 4 e as checagens `acende`/`nao_queima`) e a função `simular` em `bancada/index.html` (o ▶ e o painel) são **a mesma conta em duas línguas**: análise nodal, LED com queda fixa `vf`, chave apertada vira fio. Mudou um, muda o outro, e confira que os dois dão o mesmo número pra lanterninha (11 mA com 3,0 V e 100 Ω).
+`ferramenta/circuito.py` (etapa 4 e as checagens `acende`/`nao_queima`) e a função `simular` em `bancada/index.html` (o ▶ e o painel) são **a mesma conta em duas línguas**: análise nodal; LED aceso = joelho (`vf − r_s·i_teste`) mais `r_s` em série, os três do datasheet; pilha com uma resistência mínima só pra conta (não é a interna de verdade); chave apertada vira fio; pino sem net é aberto. Mudou um, muda o outro, e confira que os dois dão o mesmo número pra lanterninha (11 mA com 3,0 V e 100 Ω).
 
 ## Falar com o Luiz sobre eletrônica
 

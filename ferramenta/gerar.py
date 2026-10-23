@@ -4,6 +4,7 @@ uso: python ferramenta/gerar.py placas/estudo [-m "o que mudou"]
 """
 import json
 import math
+import re
 import sys
 import zipfile
 from datetime import datetime
@@ -43,14 +44,20 @@ def numero(txt, n):
         raise ErroTxt(n, f"'{txt}' devia ser um número")
 
 
+NOME = re.compile(r"[A-Za-z_]\w*$")   # ref de peca e nome de net: letras, numeros e _
+
+
 def valor(txt, n):
     """'100', '330', '4.7k', '10k', '1M' -> ohms"""
     t = txt.replace("Ω", "").replace("R", "").rstrip("ohm")
     mult = {"k": 1e3, "M": 1e6}.get(t[-1:], 1)
     try:
-        return float(t[:-1] if mult != 1 else t) * mult
+        v = float(t[:-1] if mult != 1 else t) * mult
     except ValueError:
         raise ErroTxt(n, f"'{txt}' devia ser um valor como 100, 4.7k ou 10k")
+    if v <= 0:
+        raise ErroTxt(n, "o valor tem que ser maior que zero")
+    return v
 
 
 def ler(texto):
@@ -73,12 +80,17 @@ def ler(texto):
             lido["furos"].append({"d": numero(args[1], n), "linha": n})
         elif cmd == "peca":
             ref = args[0]
+            if not NOME.match(ref):
+                raise ErroTxt(n, f"'{ref}' não serve de nome: só letras, números e _ (ex: R1, DevKit)")
             if ref in lido["pecas"]:
                 raise ErroTxt(n, f"{ref} já existe na linha {lido['pecas'][ref]['linha']}", [ref])
             lido["pecas"][ref] = {"ref": ref, "tipo": args[1], "x": numero(args[2], n), "y": numero(args[3], n),
                                   "valor": valor(args[4], n) if len(args) > 4 else None,
                                   "valor_txt": args[4] if len(args) > 4 else None, "linha": n}
         elif cmd == "liga":
+            for ponta in args:
+                if not NOME.match(ponta.replace(".", "", 1)) or ponta.count(".") > 1:
+                    raise ErroTxt(n, f"'{ponta}' devia ser REF.PINO ou o nome de uma net (ex: R1.2, GND)")
             lido["ligas"].append({"de": args[0], "ate": args[1], "linha": n})
     if lido["placa"] is None:
         raise ErroTxt(1, "falta a linha 'placa L A'")
@@ -156,6 +168,8 @@ def montar(lido):
         rz = raiz(lg["de"])
         if not nome.get(rz):
             k += 1
+            while f"N{k}" in nome.values():   # o Luiz pode ter usado N1 no txt
+                k += 1
             nome[rz] = f"N{k}"
     for p, pino in pinos.items():
         pino["net"] = nome.get(raiz(p))
@@ -221,9 +235,11 @@ def montar(lido):
     # da pra ligar no papel? so se toda peca tem modelo eletrico e todo resistor tem valor
     falta = [p["ref"] for p in pecas if not p["eletrica"]]
     sem_valor = [p["ref"] for p in pecas if p["eletrica"] and p["eletrica"]["modelo"] == "resistor" and p["valor"] is None]
+    soltos = [p["ref"] for p in pecas if p["eletrica"] and any(q["net"] is None for q in p["pinos"])]
     return {"placa": lido["placa"], "pecas": pecas, "trilhas": trilhas, "furos": furos,
             "fabrica": {"pronta": not exemplo, "falta_datasheet": exemplo},
-            "simulacao": {"pode": not falta and not sem_valor, "falta_modelo": falta, "sem_valor": sem_valor},
+            "simulacao": {"pode": not falta and not sem_valor and not soltos, "falta_modelo": falta,
+                          "sem_valor": sem_valor, "soltos": soltos},
             "compras": compras, "linhas": lido["linhas"]}
 
 
@@ -423,21 +439,25 @@ def o_que_mudou(antigo, novo):
             anota("adicionou", ref)
         elif pa[ref]["tipo"] != pb[ref]["tipo"]:
             anota("trocou", ref)
-        elif (pa[ref]["x"], pa[ref]["y"]) != (pb[ref]["x"], pb[ref]["y"]):
-            anota("moveu", ref)
-        elif pa[ref]["valor"] != pb[ref]["valor"]:
-            anota("trocou", f"{ref} pra {pb[ref]['valor_txt']} Ω")
+        else:
+            if (pa[ref]["x"], pa[ref]["y"]) != (pb[ref]["x"], pb[ref]["y"]):
+                anota("moveu", ref)
+            if pa[ref]["valor"] != pb[ref]["valor"]:
+                if pb[ref]["valor"] is None:
+                    anota("tirou", f"o valor de {ref}")
+                else:
+                    anota("trocou", f"{ref} pra {pb[ref]['valor_txt']} Ω")
     for ref in pa:
         if ref not in pb:
             anota("tirou", ref)
-    la = [(l["de"], l["ate"]) for l in a["ligas"]]
-    lb = [(l["de"], l["ate"]) for l in b["ligas"]]
-    for x, y in lb:
-        if (x, y) not in la:
-            anota("ligou", f"{x}–{y}")
-    for x, y in la:
-        if (x, y) not in lb:
-            anota("desligou", f"{x}–{y}")
+    la = [frozenset((l["de"], l["ate"])) for l in a["ligas"]]   # liga A B = liga B A
+    lb = [frozenset((l["de"], l["ate"])) for l in b["ligas"]]
+    for l in b["ligas"]:
+        if frozenset((l["de"], l["ate"])) not in la:
+            anota("ligou", f"{l['de']}–{l['ate']}")
+    for l in a["ligas"]:
+        if frozenset((l["de"], l["ate"])) not in lb:
+            anota("desligou", f"{l['de']}–{l['ate']}")
     if not feito:
         return "só comentários"
     e = lambda c: c[0] if len(c) == 1 else ", ".join(c[:-1]) + " e " + c[-1]
