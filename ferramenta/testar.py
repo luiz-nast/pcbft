@@ -271,6 +271,89 @@ def tira_foto(ctx):
     return "saida/foto.png, desenhada a partir do Gerber"
 
 
+# requisitos: o requisitos.md declara o objetivo e, pra cada requisito, as pecas e como verificar
+CHECAGENS = {"existe": 1, "ligado": 2, "sem_pino_solto": 1}   # checagem -> quantos valores
+MOTIVOS = {"existe": "falta a peça", "ligado": "falta ligar", "sem_pino_solto": "pino solto"}
+
+
+def ler_requisitos(texto):
+    obj = {"titulo": "", "texto": "", "itens": []}
+    atual = None
+    for n, linha in enumerate(texto.splitlines(), 1):
+        l = linha.strip()
+        if not l:
+            continue
+        if l.startswith("# "):
+            obj["titulo"] = l[2:].removeprefix("Objetivo:").strip()
+        elif l.startswith("## "):
+            ident, _, titulo = l[3:].partition(" ")
+            atual = {"id": ident, "titulo": titulo.strip(), "pecas": [], "detalhes": [], "verifica": []}
+            obj["itens"].append(atual)
+        elif atual is None:
+            obj["texto"] = f"{obj['texto']} {l}".strip()
+        elif l.startswith("pecas:"):
+            atual["pecas"] += l[6:].split()
+        elif l.startswith("verifica:"):
+            p = l[9:].split()
+            if not p or p[0] not in CHECAGENS:
+                raise gerar.ErroTxt(n, f"checagem desconhecida '{l[9:].strip()}' (tem: {', '.join(CHECAGENS)})")
+            if len(p) - 1 != CHECAGENS[p[0]]:
+                raise gerar.ErroTxt(n, f"'{p[0]}' espera {CHECAGENS[p[0]]} valores")
+            atual["verifica"].append({"texto": " ".join(p)})
+        elif l.startswith("- "):
+            atual["detalhes"].append(l[2:])
+    return obj
+
+
+def checar(texto, modelo):
+    cmd, *a = texto.split()
+    pecas = {p["ref"]: p for p in modelo["pecas"]}
+    contagem = {}
+    for p in modelo["pecas"]:
+        for pino in p["pinos"]:
+            contagem[pino["net"]] = contagem.get(pino["net"], 0) + 1
+
+    def nets(x):   # REF.PINO -> net do pino; REF -> nets de qualquer pino dela; senao e nome de net
+        if "." in x:
+            ref, n = x.split(".", 1)
+            pino = next((q for q in pecas.get(ref, {}).get("pinos", []) if q["n"] == n), None)
+            return {pino["net"]} if pino and pino["net"] else set()
+        if x in pecas:
+            return {q["net"] for q in pecas[x]["pinos"] if q["net"]}
+        return {x}
+
+    if cmd == "existe":
+        return a[0] in pecas
+    if cmd == "ligado":
+        return bool(nets(a[0]) & nets(a[1]))
+    if cmd == "sem_pino_solto":
+        return a[0] in pecas and all(q["net"] and contagem[q["net"]] > 1 for q in pecas[a[0]]["pinos"])
+
+
+def avaliar_requisitos(pasta, modelo):
+    arq = pasta / "requisitos.md"
+    if not arq.exists():
+        return None
+    try:
+        obj = ler_requisitos(arq.read_text())
+    except gerar.ErroTxt as e:
+        return {"titulo": "", "texto": "", "itens": [], "erro": f"requisitos.md, linha {e.linha}: {e.msg}"}
+    for item in obj["itens"]:
+        if modelo is None:
+            item.update(status="?", motivo="a placa não montou")
+            continue
+        for v in item["verifica"]:
+            v["ok"] = checar(v["texto"], modelo)
+        falha = next((v for v in item["verifica"] if not v["ok"]), None)
+        if not item["verifica"]:
+            item.update(status="?", motivo="sem verificação")
+        elif falha:
+            item.update(status="falha", motivo=MOTIVOS[falha["texto"].split()[0]])
+        else:
+            item.update(status="ok", motivo="ok")
+    return obj
+
+
 # a rodada
 def salvar(arq, estado):
     tmp = arq.with_suffix(".tmp")
@@ -305,6 +388,13 @@ def rodar(pasta, frase=None):
             for resto in estado["etapas"][estado["etapas"].index(etapa) + 1:]:
                 resto["estado"] = "nao_rodou"
             break
+    objetivo = avaliar_requisitos(pasta, ctx.get("modelo"))
+    if objetivo:
+        estado["objetivo"] = objetivo
+        estado["requisitos"] = {i["id"]: i["status"] for i in objetivo["itens"]}
+        for etapa in estado["etapas"]:
+            if etapa.get("onde"):
+                etapa["requisitos"] = [i["id"] for i in objetivo["itens"] if set(i["pecas"]) & set(etapa["onde"])]
     estado["rodando"] = False
     estado["fim"] = datetime.now().isoformat(timespec="seconds")
     salvar(arq, estado)
@@ -334,4 +424,8 @@ if __name__ == "__main__":
     for i, e in enumerate(estado["etapas"], 1):
         marca = {"ok": "✓", "falhou": "✗"}.get(e["estado"], "·")
         print(f"{marca} {i}. {e['nome']}: {e['detalhe'] or e['estado']}")
+    for ident, status in estado["requisitos"].items():
+        print(f"  {ident}: {status}")
+    if estado.get("objetivo", {}).get("erro"):
+        print(f"  {estado['objetivo']['erro']}")
     sys.exit(0 if all(e["estado"] == "ok" for e in estado["etapas"]) else 1)
