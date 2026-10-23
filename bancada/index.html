@@ -68,6 +68,37 @@ aside.inspetor { flex: 0 0 340px; overflow: auto; padding: 20px; border-left: 1p
 .explica b { font-size: 12px; font-weight: 600; color: var(--destaque); }
 .explica p { margin: 0; line-height: 1.55; }
 
+/* thinking */
+.thinking { flex: 1; overflow: auto; background: var(--area); padding: 32px 24px 48px; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+.modos { display: flex; gap: 2px; background: var(--painel); border: 1px solid var(--borda); border-radius: 999px; padding: 3px; }
+.modos button { min-height: 36px; padding: 0 16px; border-radius: 999px; font-size: 13px; }
+.modos button[aria-pressed="true"] { background: var(--ativo); }
+.arvore { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+.objetivo { width: 360px; max-width: 100%; background: var(--painel); border: 1.5px solid var(--texto); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+.objetivo .rotulo { font-size: 12px; color: var(--sec); }
+.objetivo .titulo-obj { font-size: 17px; font-weight: 600; }
+.objetivo p { margin: 0; font-size: 13px; color: #C8CDD2; line-height: 1.5; }
+.tronco { width: 2px; height: 24px; background: var(--borda2); }
+.galhos { display: flex; align-items: flex-start; max-width: 100%; overflow-x: auto; padding-bottom: 4px; }
+.galho { position: relative; padding: 24px 20px 0; flex: none; }
+.galho::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--borda2); }
+.galho:first-child::before { left: 50%; } .galho:last-child::before { right: 50%; }
+.galho:only-child::before { display: none; }
+.galho::after { content: ''; position: absolute; top: 0; left: calc(50% - 1px); width: 2px; height: 24px; background: var(--borda2); }
+.req { width: 220px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.req.falha { border-color: #5A4527; }
+.req .status { align-self: flex-start; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #22272C; color: var(--sec); }
+.req.ok .status { background: var(--ok); color: #0E2A1A; }
+.req.falha .status { background: var(--cobre); color: #2A1A05; }
+.req .titulo-req { font-size: 15px; font-weight: 600; line-height: 1.35; }
+.req .pecas { font-family: var(--mono); font-size: 12px; color: var(--sec); }
+.req ul { margin: 0; padding: 10px 0 0; border-top: 1px solid var(--borda); list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #C8CDD2; line-height: 1.4; }
+.req li.checa { font-family: var(--mono); font-size: 11.5px; color: var(--sec); }
+.req li.checa.nao { color: var(--cobre); }
+.req .ver { align-self: flex-start; min-height: 32px; padding: 0; color: var(--cobre); font-size: 13px; }
+.rodape { font-family: var(--mono); font-size: 12px; color: #8A939C; text-align: center; }
+.erro-req { color: var(--erro); font-family: var(--mono); font-size: 13px; }
+
 /* testes */
 .testes { flex: 1; overflow: auto; background: var(--area); padding: 32px 24px 48px; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 32px; }
 .testes .coluna { flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 16px; }
@@ -137,7 +168,7 @@ const PLACA = new URLSearchParams(location.search).get('placa') || 'estudo';
 const BASE = `../placas/${PLACA}/`;
 
 const S = {
-  aba: 'projeto',
+  aba: 'projeto', detalhado: false,
   modelo: null, testes: null, versoes: [],
   brutos: {},            // ultimo texto lido de cada arquivo, pra saber se mudou
   modelosVersao: {},     // v -> modelo daquela versao (versoes/vN.json)
@@ -316,7 +347,8 @@ function etiqueta(x, y, texto, fonte, fundo, cor) {
 
 // ---------- topo ----------
 function desenharTopo() {
-  $('#nome').textContent = PLACA;
+  $('#nome').textContent = S.testes?.objetivo?.titulo || PLACA;
+  document.title = `${$('#nome').textContent} · bancada`;
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-pressed', b.dataset.aba === S.aba));
   const t = S.testes, st = $('#status');
   if (!t) { st.textContent = 'sem testes'; st.style.color = 'var(--sec)'; }
@@ -378,6 +410,8 @@ function desenharProjeto(main) {
   let painel = main.querySelector('aside.inspetor');
   const info = S.sel && inspecionar(m, S.sel);
   if (!info) { painel?.remove(); return; }
+  const ref = S.sel.ref || S.sel.nome?.split('.')[0];
+  if (ref) info.req = requisitosDa(ref);
   if (!painel) { painel = document.createElement('aside'); painel.className = 'inspetor'; painel.setAttribute('aria-label', 'Inspetor'); main.append(painel); }
   painel.innerHTML = `
     <div class="cab">
@@ -386,7 +420,13 @@ function desenharProjeto(main) {
     </div>
     <dl>${info.linhas.map(([k, v, alerta]) => `<dt>${esc(k)}</dt><dd${alerta ? ' class="alerta"' : ''}>${esc(v)}</dd>`).join('')}</dl>
     ${info.linha ? `<div class="origem"><span>Vem de placa.txt, linha ${info.linha}</span><code>${esc(m.linhas[info.linha - 1])}</code></div>` : ''}
-    <div class="explica"><b>O que é isso?</b><p>${esc(info.explica)}</p></div>`;
+    <div class="explica"><b>O que é isso?</b><p>${esc(info.explica)}</p></div>
+    ${info.req ? `<span class="tipo">Requisito: ${esc(info.req)}</span>` : ''}`;
+}
+
+// requisitos (do testes.json) que citam essa peca
+function requisitosDa(ref) {
+  return (S.testes?.objetivo?.itens || []).filter(i => i.pecas.includes(ref)).map(i => `${i.id} ${i.titulo}`).join(' · ');
 }
 
 // o que o inspetor mostra pra cada coisa clicada
@@ -487,6 +527,39 @@ function selecaoDoAlvo(alvo) {
   return null;
 }
 
+// ---------- aba Thinking ----------
+function desenharThinking(main) {
+  const obj = S.testes?.objetivo;
+  if (!obj) { main.innerHTML = `<p class="vazio">Ainda não tem <span class="mono">requisitos.md</span> (ou os testes não rodaram depois dele).</p>`; return; }
+  const cards = obj.itens.map(i => {
+    const classe = i.status === 'ok' ? 'ok' : i.status === 'falha' ? 'falha' : '';
+    const detalhes = S.detalhado ? `<ul>
+        ${i.detalhes.map(d => `<li>${esc(d)}</li>`).join('')}
+        ${(i.verifica || []).map(v => `<li class="checa${v.ok === false ? ' nao' : ''}">${v.ok ? '✓' : v.ok === false ? '✗' : '·'} ${esc(v.texto)}</li>`).join('')}
+      </ul>` : '';
+    const primeira = i.pecas.find(r => S.modelo?.pecas.some(p => p.ref === r));
+    return `<div class="galho"><article class="req ${classe}">
+      <span class="status">${esc(i.motivo || i.status)}</span>
+      <span class="titulo-req">${esc(i.titulo)}</span>
+      <span class="pecas">${esc(i.id)} · ${esc(i.pecas.join(' · ') || 'sem peças')}</span>
+      ${detalhes}
+      ${primeira ? `<button type="button" class="ver" data-abrir="${esc(primeira)}">Ver na placa →</button>` : ''}
+    </article></div>`;
+  }).join('');
+  main.innerHTML = `<section class="thinking" aria-label="Thinking">
+    <div class="modos" role="group" aria-label="Modo">
+      <button type="button" data-detalhado="0" aria-pressed="${!S.detalhado}">Simples</button>
+      <button type="button" data-detalhado="1" aria-pressed="${S.detalhado}">Detalhado</button>
+    </div>
+    <div class="arvore">
+      <div class="objetivo"><span class="rotulo">Objetivo</span><span class="titulo-obj">${esc(obj.titulo || PLACA)}</span>${obj.texto ? `<p>${esc(obj.texto)}</p>` : ''}</div>
+      ${obj.itens.length ? `<div class="tronco"></div><div class="galhos">${cards}</div>` : ''}
+    </div>
+    ${obj.erro ? `<p class="erro-req">${esc(obj.erro)}</p>` : ''}
+    <span class="rodape">requisitos.md · status calculado pelos testes, sem IA</span>
+  </section>`;
+}
+
 // ---------- aba Testes ----------
 const ESTADOS = { ok: ['✓', 'ok'], rodando: ['…', 'rodando'], falhou: ['✗', 'falhou'], nao_rodou: ['·', 'não rodou'], aguardando: ['·', 'aguardando'] };
 
@@ -503,7 +576,8 @@ function desenharTestes(main) {
 
   const etapas = t.etapas.map(e => {
     const [icone, texto] = ESTADOS[e.estado] || ESTADOS.aguardando;
-    const detalhe = e.estado === 'ok' || e.estado === 'falhou' ? e.detalhe : '';
+    let detalhe = e.estado === 'ok' || e.estado === 'falhou' ? e.detalhe : '';
+    if (e.estado === 'falhou' && e.requisitos?.length) detalhe += ` · requisitos ${e.requisitos.join(', ')}`;
     return `<li class="etapa ${esc(e.estado)}">
       <span class="bola" aria-hidden="true">${icone}</span>
       <div class="meio"><span class="nome-etapa">${esc(e.nome)}</span>
@@ -539,7 +613,7 @@ function desenhar() {
   if (main.dataset.aba !== S.aba) { main.innerHTML = ''; main.dataset.aba = S.aba; }
   if (S.aba === 'projeto') desenharProjeto(main);
   else if (S.aba === 'testes') desenharTestes(main);
-  else main.innerHTML = `<p class="vazio">Em construção.</p>`;
+  else desenharThinking(main);
 }
 
 function irPara(aba, sel) {
@@ -576,6 +650,7 @@ document.addEventListener('click', async e => {
     return desenhar();
   }
   if (b.dataset.abrir) { S.ver = null; S.cx = null; return irPara('projeto', { k: 'peca', ref: b.dataset.abrir }); }
+  if (b.dataset.detalhado) { S.detalhado = b.dataset.detalhado === '1'; return desenhar(); }
   if (b.dataset.modo) { S.modo = b.dataset.modo; return desenhar(); }
   if (b.dataset.zoom) return zoomEm(+b.dataset.zoom);
   if ('centralizar' in b.dataset) { centralizar(); return aplicarZoom(); }
