@@ -48,12 +48,15 @@ bancada/
 placas/estudo/
   requisitos.md
   placa.txt
-  saida/              ← gerado: modelo.json, *.gbr, *.drl, foto.png, fabrica.zip
+  saida/              ← gerado: modelo.json, placa-*.gbr, placa-PTH/NPTH.drl, foto.png, fabrica.zip
   testes.json         ← gerado
-  versoes/            ← v1.txt, v2.txt, ... + versoes.json
+  versoes/            ← v1.txt, v2.txt, ... + v1.json, v2.json (modelo de cada versão) + versoes.json
 ```
 
-Rodar a bancada: `python -m http.server` na raiz e abrir `localhost:8000/bancada/`. A página relê os arquivos a cada 1 s (polling simples).
+Instalar uma vez: `uv venv .venv && uv pip install -r requirements.txt` (só o `gerbonara`, pra etapa 5; a foto usa o Chrome headless).
+Gerar e testar: `.venv/bin/python ferramenta/testar.py placas/estudo` (o `testar.py` chama o `gerar.py`; o `gerar.py` sozinho também funciona).
+Rodar a bancada: `python -m http.server` na raiz e abrir `localhost:8000/bancada/?placa=estudo`. A página relê os arquivos a cada 1 s (polling simples).
+As pastas em `placas/` ficam só na máquina (`.gitignore`); o repositório público leva só a ferramenta.
 
 ---
 
