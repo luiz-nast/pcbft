@@ -68,6 +68,30 @@ aside.inspetor { flex: 0 0 340px; overflow: auto; padding: 20px; border-left: 1p
 .explica b { font-size: 12px; font-weight: 600; color: var(--destaque); }
 .explica p { margin: 0; line-height: 1.55; }
 
+/* testes */
+.testes { flex: 1; overflow: auto; background: var(--area); padding: 32px 24px 48px; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 32px; }
+.testes .coluna { flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 16px; }
+.testes .coluna.placa { flex: 0 1 560px; gap: 10px; }
+.testes h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.testes .sub { font-family: var(--mono); font-size: 12px; color: var(--sec); }
+.etapas { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.etapa { display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: var(--painel); border: 1px solid var(--borda); border-radius: 10px; }
+.etapa .bola { width: 26px; height: 26px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 13px; font-weight: 600; }
+.etapa .meio { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.etapa .nome-etapa { font-size: 14px; font-weight: 500; }
+.etapa .detalhe { font-size: 13px; color: var(--sec); line-height: 1.45; }
+.etapa code { align-self: flex-start; margin-top: 4px; font-family: var(--mono); font-size: 12px; background: var(--area); padding: 4px 8px; border-radius: 6px; color: var(--texto); }
+.etapa .estado { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.etapa.ok .bola { background: #173A26; color: var(--ok); } .etapa.ok .estado { color: var(--ok); }
+.etapa.rodando { border-color: #5A4527; } .etapa.rodando .bola { background: #3A2E17; color: var(--cobre); } .etapa.rodando .estado { color: var(--cobre); }
+.etapa.falhou { border-color: #6B2A2A; } .etapa.falhou .bola { background: #3A1A1A; color: var(--erro); } .etapa.falhou .estado { color: var(--erro); }
+.etapa.aguardando .bola, .etapa.nao_rodou .bola { background: #22272C; color: #6B747D; }
+.etapa.aguardando .estado, .etapa.nao_rodou .estado { color: #8A939C; }
+.testes .titulo-placa { font-size: 13px; font-weight: 600; color: var(--sec); }
+.testes svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; background: var(--area); }
+.links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.links button, .links a { min-height: 36px; padding: 0; color: var(--cobre); font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; }
+
 /* desenho da placa (unidades em mm) */
 .placa-fundo { fill: var(--placa); stroke: #C8CDD2; stroke-width: 0.25; }
 .furo { fill: var(--area); stroke: #C8CDD2; stroke-width: 0.15; }
@@ -80,6 +104,7 @@ aside.inspetor { flex: 0 0 340px; overflow: auto; padding: 20px; border-left: 1p
 .apagado { opacity: 0.18; }
 .sel { fill: none; stroke: var(--destaque); stroke-width: 0.3; pointer-events: none; }
 .sel-pino { fill: none; stroke: #FFFFFF; stroke-width: 0.25; pointer-events: none; }
+.erro { fill: none; stroke: #FF6B5E; stroke-width: 0.35; stroke-dasharray: 0.9 0.5; pointer-events: none; }
 .novo { fill: none; stroke: var(--ok); stroke-width: 0.25; stroke-dasharray: 0.8 0.5; pointer-events: none; }
 .etiqueta rect { pointer-events: none; }
 .etiqueta text { font-family: var(--mono); font-weight: 500; pointer-events: none; }
@@ -253,6 +278,12 @@ function placaSVG(m, o = {}) {
   if (o.sel?.k === 'pino') {
     const pino = pinoDe(m, o.sel.nome);
     if (pino) s += `<circle class="sel-pino" cx="${pino.x}" cy="${Y(pino.y)}" r="${(pino.pad.d ?? Math.max(pino.pad.w, pino.pad.h)) / 2 + 0.45}"/>`;
+  }
+  for (const [ref, rotulo] of Object.entries(o.erros || {})) {
+    const p = m.pecas.find(q => q.ref === ref);
+    if (!p) continue;
+    s += contorno(ref, 'erro', 1.2);
+    if (rotulo) s += etiquetaAoLado(p, Y, W, rotulo, fonte * 0.8, 'var(--erro)', '#2A0B08');
   }
   for (const k of o.novos || []) {
     const [tipo, id] = k.split(':');
@@ -456,12 +487,58 @@ function selecaoDoAlvo(alvo) {
   return null;
 }
 
+// ---------- aba Testes ----------
+const ESTADOS = { ok: ['✓', 'ok'], rodando: ['…', 'rodando'], falhou: ['✗', 'falhou'], nao_rodou: ['·', 'não rodou'], aguardando: ['·', 'aguardando'] };
+
+function hora(iso) { return iso ? iso.slice(11, 16) : ''; }
+
+function desenharTestes(main) {
+  const t = S.testes;
+  if (!t) { main.innerHTML = `<p class="vazio">Ainda não rodou nenhum teste.<br>Rode <span class="mono">python ferramenta/testar.py placas/${esc(PLACA)}</span>.</p>`; return; }
+  const falha = !t.rodando && t.etapas.find(e => e.estado === 'falhou');
+  const m = S.modelo;
+  const erros = falha ? (falha.rotulos || {}) : {};
+  const quando = t.rodando ? `começou ${hora(t.inicio)}` : `rodou ${hora(t.fim || t.inicio)}`;
+  const fotoOk = t.etapas[5]?.estado === 'ok';
+
+  const etapas = t.etapas.map(e => {
+    const [icone, texto] = ESTADOS[e.estado] || ESTADOS.aguardando;
+    const detalhe = e.estado === 'ok' || e.estado === 'falhou' ? e.detalhe : '';
+    return `<li class="etapa ${esc(e.estado)}">
+      <span class="bola" aria-hidden="true">${icone}</span>
+      <div class="meio"><span class="nome-etapa">${esc(e.nome)}</span>
+        ${detalhe ? `<span class="detalhe">${esc(detalhe)}</span>` : ''}
+        ${e.codigo ? `<code>${esc(e.codigo)}</code>` : ''}</div>
+      <span class="estado">${texto}</span></li>`;
+  }).join('');
+
+  const pad = 5;
+  const placa = m ? `<svg class="mini" viewBox="${-pad} ${-pad} ${m.placa.w + 2 * pad} ${m.placa.h + 2 * pad}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placa">${placaSVG(m, { erros })}</svg>` : '';
+  const titulo = t.rodando ? 'Conferindo a placa…' : falha ? 'Onde está o problema' : 'Placa sem problemas';
+  const links = Object.keys(erros).filter(ref => m?.pecas.some(p => p.ref === ref))
+    .map(ref => `<button type="button" data-abrir="${esc(ref)}">Abrir ${esc(ref)} no Projeto →</button>`).join('');
+
+  main.innerHTML = `<section class="testes" aria-label="Testes">
+    <div class="coluna">
+      <div><h2>Rodada de testes</h2><span class="sub">${t.versao ? 'v' + t.versao + ' · ' : ''}${quando} · testes.json</span></div>
+      <ol class="etapas">${etapas}</ol>
+      ${!t.rodando && t.resumo ? `<div class="explica"><b>Resumo do Claude · só no final</b><p>${esc(t.resumo)}</p></div>` : ''}
+    </div>
+    <div class="coluna placa">
+      <span class="titulo-placa">${titulo}</span>
+      ${placa}
+      <div class="links">${links}${fotoOk ? `<a href="${BASE}saida/foto.png" target="_blank" rel="noopener">Ver a foto tirada do Gerber ↗</a>` : ''}</div>
+    </div>
+  </section>`;
+}
+
 // ---------- desenha a aba certa ----------
 function desenhar() {
   desenharTopo();
   const main = $('#main');
   if (main.dataset.aba !== S.aba) { main.innerHTML = ''; main.dataset.aba = S.aba; }
   if (S.aba === 'projeto') desenharProjeto(main);
+  else if (S.aba === 'testes') desenharTestes(main);
   else main.innerHTML = `<p class="vazio">Em construção.</p>`;
 }
 
@@ -498,6 +575,7 @@ document.addEventListener('click', async e => {
     if (v > 1) await modeloDaVersao(v - 1);
     return desenhar();
   }
+  if (b.dataset.abrir) { S.ver = null; S.cx = null; return irPara('projeto', { k: 'peca', ref: b.dataset.abrir }); }
   if (b.dataset.modo) { S.modo = b.dataset.modo; return desenhar(); }
   if (b.dataset.zoom) return zoomEm(+b.dataset.zoom);
   if ('centralizar' in b.dataset) { centralizar(); return aplicarZoom(); }
