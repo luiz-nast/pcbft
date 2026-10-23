@@ -23,11 +23,19 @@ O Claude decide só a **intenção** (quais peças, onde, o que liga em quê). C
    ```
 6. Atualize o `AGORA.md` no fim da sessão.
 
-**Nunca diga que terminou sem ter rodado o `testar.py`.** A bancada (`python3 ferramenta/app.py`, ou o atalho "Bancada de placas") se atualiza sozinha; não descreva o progresso no chat, o resumo final basta.
+**Nunca diga que terminou sem ter rodado o `testar.py`.** O Chassi (`python3 ferramenta/app.py`, ou o atalho "Chassi" no menu) se atualiza sozinho; não descreva o progresso no chat, o resumo final basta.
+
+## Simulador
+
+`ferramenta/circuito.py` (etapa 4 e as checagens `acende`/`nao_queima`) e a função `simular` em `bancada/index.html` (o ▶ e o painel) são **a mesma conta em duas línguas**: análise nodal, LED com queda fixa `vf`, chave apertada vira fio. Mudou um, muda o outro, e confira que os dois dão o mesmo número pra lanterninha (11 mA com 3,0 V e 100 Ω).
+
+## Falar com o Luiz sobre eletrônica
+
+Ele não sabe eletrônica e quer aprender pelo app, não por despejo de números. No app e nas respostas: nome de gente (`D1 +`, `o lado A do botão`), uma frase por ideia, e a conta só quando ela explica alguma coisa (`(pilha − LED) ÷ resistor`). A faixa importa mais que o valor exato: diga o que acontece com a pilha fraca e com a nova.
 
 ## Fábrica
 
-Só quando o Luiz pedir: suba o `saida/fabrica.zip` na página de cotação da JLCPCB (`https://cart.jlcpcb.com/quote`, "Add gerber file") e pare na cotação. **Nunca** salve no carrinho, faça pedido ou pague sem ele confirmar o item e o total. Depois, registre o que aconteceu em `placas/<nome>/fabrica.json` (a aba Processo mostra):
+Só quando o Luiz pedir: suba o `saida/fabrica.zip` (ele só existe se a última rodada passou inteira) na página de cotação da JLCPCB (`https://cart.jlcpcb.com/quote`, "Add gerber file") e pare na cotação. **Nunca** salve no carrinho, faça pedido ou pague sem ele confirmar o item e o total. Depois, registre o que aconteceu em `placas/<nome>/fabrica.json` (a aba Processo mostra):
 
 ```json
 {"site": "JLCPCB", "url": "https://cart.jlcpcb.com/quote", "quando": "AAAA-MM-DD HH:MM", "versao": 1,
@@ -42,7 +50,7 @@ Uma instrução por linha, mm, origem no canto inferior esquerdo. `#` começa co
 ```
 placa 70 45                 # contorno L x A
 furos cantos 3.2            # 4 furos de fixação a 3,5 mm das bordas (3,2 = M3)
-peca R1 resistor 38.62 5    # REF TIPO X Y (centro da peça); TIPO existe em biblioteca.py
+peca R1 resistor_axial 38.62 5 100   # REF TIPO X Y [VALOR]; TIPO existe em biblioteca.py; VALOR em ohms (100, 4.7k)
 liga DevKit.11 R1.1         # REF.PINO ou nome de net (GND)
 liga D1.2 GND               # vai até o pino de GND mais perto
 ```
@@ -58,7 +66,7 @@ Uma frase.
 
 ## R1 Título do requisito
 pecas: D1 R1
-verifica: ligado R1.2 D1.1      # existe REF | ligado A B | separado A B | sem_pino_solto REF
+verifica: ligado R1.2 D1.1      # existe | ligado A B | separado A B | sem_pino_solto | acende REF | nao_queima REF
 - sub-requisito em texto
 ```
 
@@ -66,7 +74,7 @@ O status é calculado pelo `testar.py`. Nunca escreva status à mão. Checagem n
 
 ## Biblioteca
 
-`ferramenta/biblioteca.py`: `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, juntos, fonte`. `juntos` = pinos ligados por dentro da peça (botão 1-2 e 3-4): ligar os dois lados do botão no mesmo pino deixa ele em curto. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo: a bancada avisa e o `fabrica.zip` não é gerado. Não sabe a medida? Pergunte ou deixe pendente. Peça nova: tire pinos, pads e furo do footprint oficial do KiCad (`.kicad_mod` bruto do GitLab, y invertido, origem no centro do corpo) e confira com o datasheet.
+`ferramenta/biblioteca.py`: `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, juntos, nomes, eletrica, compra, fonte`. **Toda peça leva `nomes`** de gente pros pinos (`+`, `−`, `A`/`B`, `lado 1`): o Luiz não sabe o que é "pino 1", e o app mostra o nome. `eletrica` é o modelo do simulador; sem ele a etapa 4 pula. `juntos` = pinos ligados por dentro da peça (botão 1-2 e 3-4): ligar os dois lados do botão no mesmo pino deixa ele em curto. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo: a bancada avisa e o `fabrica.zip` não é gerado. Não sabe a medida? Pergunte ou deixe pendente. Peça nova: tire pinos, pads e furo do footprint oficial do KiCad (`.kicad_mod` bruto do GitLab, y invertido, origem no centro do corpo) e confira com o datasheet.
 
 ## Regras de formato (já aprendidas)
 
@@ -79,6 +87,9 @@ O status é calculado pelo `testar.py`. Nunca escreva status à mão. Checagem n
 
 ## Eletrônica (regras simples, pra explicar pro Luiz)
 
-- LED sempre com resistor em série; sem ele, o LED queima. Pino 1 é o + (ânodo).
+- LED sempre com resistor em série; sem ele, o LED queima. O `+` (ânodo, perna comprida) é o nosso pino 1.
+- Corrente do LED = (pilha − queda do LED) ÷ resistor. Com 3 V, 1,9 V de LED e 100 Ω: 11 mA. O datasheet mede a 10 mA; o máximo é 30 mA.
+- Pilha CR2032: 3,0 V nominal, considerada fraca em 2,0 V. Teste sempre a faixa toda, não só o valor nominal.
+- Botão de 4 pinos: 1-2 são o mesmo lado, 3-4 o outro. Ligar a pilha e o resistor no mesmo lado deixa o LED sempre aceso (a checagem `separado` pega).
 - GND é o terra, o 0 V de referência. Todo GND da placa é a mesma net.
 - Furo de fixação não tem cobre; cobre perto dele conta como borda (0,2 mm).

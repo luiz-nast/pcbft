@@ -1,6 +1,6 @@
-# [NOME DO PROJETO]
+# Chassi
 
-Ferramenta pessoal que transforma a descrição de uma placa em texto nos arquivos que a fábrica aceita (Gerber + Excellon), sem KiCad. O Claude Code constrói e edita; o Luiz investiga e aprende pela bancada (um app leve no navegador).
+Ferramenta pessoal que transforma a descrição de uma placa em texto nos arquivos que a fábrica aceita (Gerber + Excellon), sem KiCad. O Claude Code constrói e edita; o Luiz investiga e aprende pelo Chassi (um app leve, janela própria no navegador). O nome: a placa é o chassi onde tudo se parafusa.
 
 Este arquivo é a especificação inteira. Leia tudo antes do primeiro passo.
 
@@ -23,7 +23,7 @@ Este arquivo é a especificação inteira. Leia tudo antes do primeiro passo.
 Luiz pede no Claude Code
   → Claude edita requisitos.md e/ou placa.txt (só intenção)
   → ferramenta/gerar.py: txt → modelo.json + Gerber + Excellon
-  → ferramenta/testar.py: bateria de 6 etapas → testes.json
+  → ferramenta/testar.py: bateria de 7 etapas → testes.json
       falhou? Claude corrige e roda de novo, sozinho
   → nova versão salva em versoes/
   → bancada atualiza sozinha (lê os arquivos)
@@ -41,8 +41,10 @@ AGORA.md              ← onde paramos (4 linhas, Claude atualiza a cada sessão
 .claude/skills/placa/SKILL.md   ← skill (marco 6)
 ferramenta/
   gerar.py            ← lê placa.txt, escreve modelo.json, Gerbers, Excellon
-  biblioteca.py       ← pinos de cada tipo de peça (de datasheet)
+  biblioteca.py       ← pinos de cada tipo de peça (de datasheet), nomes de gente, modelo elétrico, o que comprar
+  circuito.py         ← liga o circuito no papel (corrente contínua: pilha, resistor, LED, chave)
   testar.py           ← bateria de testes → testes.json
+  letras.py           ← fonte de traços pra serigrafia
   app.py              ← abre a bancada como app (servidor local + janela)
   instalar.py         ← atalho "Bancada de placas" no menu de aplicativos
 bancada/
@@ -85,7 +87,7 @@ liga D1.2 GND
 
 - `placa L A` — contorno retangular.
 - `furos cantos D` — 4 furos de fixação a 3,5 mm das bordas (D = 3,2 mm pra M3).
-- `peca REF TIPO X Y` — TIPO precisa existir na biblioteca.
+- `peca REF TIPO X Y [VALOR]` — TIPO precisa existir na biblioteca. VALOR em ohms pro resistor (`100`, `4.7k`, `10k`); sem ele o circuito não liga no papel.
 - `liga A B` — `REF.PINO` ou o nome de uma net (`GND`). Vira trilha em linha reta por enquanto.
 - Depois (quando trilhas cruzarem): `liga A B via X Y`.
 - Quando as ligações ficarem complexas (marco 7+), avaliar trocar o formato por TOML. Não antes.
@@ -113,7 +115,7 @@ verifica: ligado D1.2 GND
 - LED do lado certo
 ```
 
-Checagens disponíveis no começo: `existe REF`, `ligado A B`, `sem_pino_solto REF`. Novas checagens viram código em `testar.py`.
+Checagens: `existe REF`, `ligado A B`, `separado A B` (não podem ser a mesma net), `sem_pino_solto REF`, `acende REF` (LED com pelo menos 1 mA, pilha nominal, botões apertados), `nao_queima REF` (abaixo da corrente máxima com a pilha nova). Novas checagens viram código em `testar.py`.
 
 ### 4.3 `testes.json` (o script escreve, etapa por etapa)
 
@@ -159,7 +161,7 @@ O script reescreve o arquivo a cada etapa, e é assim que a bancada mostra "ao v
 5. Escrever o Excellon (furos).
 6. Copiar `placa.txt` pra `versoes/vN.txt` e anotar em `versoes.json` uma frase do que mudou.
 
-**Biblioteca (`biblioteca.py`):** um dicionário `tipo → {pino: (dx, dy, tamanho_pad)}`. Os valores do `gerar.py` atual são **de exemplo**. Os reais saem do datasheet de cada peça escolhida, e cada entrada leva um comentário com a fonte.
+**Biblioteca (`biblioteca.py`):** um dicionário `tipo → {pinos: {pino: (dx, dy, pad[, net])}, furo, corpo, juntos, nomes, eletrica, compra, fonte}`. `nomes` dá nome de gente pra cada pino (`+`, `−`, `A`/`B`, `lado 1`): o app nunca mostra "pino 1" sozinho. `eletrica` é o que o simulador precisa (LED: vf e correntes; resistor: potência; pilha: tensão nominal, fraca e nova, mAh; chave: lados). Peça com `fonte: None` é **exemplo**; as reais saem do footprint oficial do KiCad conferido com o datasheet, e cada número elétrico cita o datasheet.
 
 **Regras de formato já aprendidas (ir pra skill):**
 - Gerber: cabeçalho `%FSLAX46Y46*%` e `%MOMM*%`, coordenadas em milionésimos de mm, `D02` move, `D01` desenha, `D03` carimba pad, `M02*` fim.
@@ -169,14 +171,17 @@ O script reescreve o arquivo a cada etapa, e é assim que a bancada mostra "ao v
 
 ## 6. A bateria de testes (`testar.py`)
 
-Seis etapas, em ordem. Para na primeira que falhar.
+Sete etapas, em ordem. Para na primeira que falhar. Uma etapa pode **pular** (não se aplica a esta placa) sem ser falha.
 
 1. **Lê o txt**: sintaxe, comandos conhecidos.
 2. **Confere peças**: todo TIPO existe na biblioteca.
-3. **Confere ligações**: pino solto, ligação pra pino que não existe, curto (duas nets diferentes encostando).
-4. **Regras da fábrica**: trilha mínima, furo mínimo, distância da borda (números da página da JLCPCB, com link no código).
-5. **Relê o Gerber**: abre os arquivos gerados com um leitor independente (`gerbonara`) e confere que lê sem aviso.
-6. **Tira foto da placa**: renderiza `foto.png` pra o Claude olhar.
+3. **Confere ligações**: peça sem ligação, pino solto, net partida, peça de 2 pinos em curto, curto (duas nets diferentes encostando).
+4. **Liga o circuito**: `circuito.py` resolve a corrente contínua com os botões apertados, pra pilha fraca, nominal e nova. Falha se algum LED passa da corrente máxima ou algum resistor da potência (números do datasheet). Pula se alguma peça não tem modelo elétrico ou resistor sem valor.
+5. **Regras da fábrica**: trilha, espaço, furo, anel, borda, máscara, serigrafia (números da página da JLCPCB, com link no código).
+6. **Relê o Gerber**: abre os arquivos gerados com um leitor independente (`gerbonara`) e confere que lê sem aviso.
+7. **Tira foto da placa**: renderiza `foto.png` pra o Claude olhar.
+
+O `fabrica.zip` só é criado aqui, no fim, quando tudo passou.
 
 Também calcula o status de cada requisito a partir das linhas `verifica:`.
 
@@ -188,14 +193,16 @@ HTML + JS puro, desenho em SVG (facilita clique, destaque e zoom via viewBox). T
 
 **Início:** a lista de projetos (`placas/*`), cada um com a miniatura da placa, o status dos testes, a versão e se já foi pra fábrica. Clicar abre o projeto.
 
-**Processo:** a história do projeto em 4 passos, pra mostrar pra alguém: objetivo e requisitos, a placa e as versões, os testes (com o resumo do Claude e o botão de rodar de novo) e a fábrica (`fabrica.zip` e, se tiver `fabrica.json`, a cotação com a imagem do site).
+**Processo:** a história do projeto em 6 passos, o caminho de toda placa, pra mostrar pra alguém: objetivo e requisitos, a placa e as versões, os testes (com o resumo do Claude e o botão de rodar de novo), as peças pra comprar (a fábrica entrega só a placa nua), a fábrica (`fabrica.zip` e, se tiver `fabrica.json`, a cotação com a imagem do site) e montar e acender.
 
 **Topo:** ← projetos · nome do projeto · abas **Processo | Thinking | Projeto | Testes** · status dos testes (✓/✗) · relógio de versões (abre lista; escolher v1/v2 mostra a placa daquela versão; opção "destacar o que mudou").
 
 **Thinking:** o objetivo num card em cima, os requisitos em cards ligados embaixo, cada um com status (ok / falta ligar) e peças. Modo **Simples** e **Detalhado** (mostra os sub-requisitos). "Ver na placa →" abre a peça na aba Projeto. Começar como árvore simples; canvas roteado só depois.
 
-**Projeto:** a placa ocupa a tela.
-- Ferramentas no canto: **seta**, **mão** (arrastar), **+ / −** zoom, centralizar.
+**Projeto:** a placa ocupa a tela; o tamanho dela fica pequenininho no canto.
+- Ferramentas no canto: **seta**, **mão** (arrastar), **+ / −** zoom, centralizar, **▶ ligar o circuito**.
+- **▶ Ligar**: a mesma conta do `circuito.py`, em JS, pra responder na hora. A corrente vira bolinhas andando nas trilhas (mais rápido com mais corrente), o LED brilha, clicar no botão da placa aperta e solta. O **painel** à direita tem a pilha (de fraca a nova), o resistor (valores comerciais E24) e, pra cada LED, a corrente com a faixa verde entre pilha fraca e nova, o risquinho do datasheet e o vermelho do limite. Mostra a conta `(pilha − LED) ÷ resistor` quando o circuito é o clássico.
+- Pinos sempre com nome de gente (`D1 +`, `SW1 lado A`, `R1 lado 2`); o número fica em letra pequena.
 - **HUD** que segue o mouse: nome do que está embaixo + x/y em mm.
 - Clicar numa peça ou pino abre o **inspetor** (direita): tipo, ligações, linha do `placa.txt` que criou aquilo, "O que é isso?" (explicação curta pra aprender), requisito atendido.
 - Clicar num pino: **escurece tudo que não é da net dele**.
