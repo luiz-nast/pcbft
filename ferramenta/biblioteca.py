@@ -3,7 +3,7 @@
 # pinos: {numero: (dx, dy, pad)} ou (dx, dy, pad, net) quando o pino ja nasce numa net (ex: GND)
 #        pad = diametro (redondo) ou (largura, altura) (retangulo)
 # furo:  diametro do furo passante de cada pino; None = peca de superficie (SMD)
-# corpo: (largura, altura) do contorno da peca, pra desenhar
+# corpo: (largura, altura) do contorno da peca, pra desenhar; redondo: True se o corpo for redondo
 # fonte: datasheet de onde vieram os numeros
 #        None = valores de EXEMPLO, nao mandar pra fabrica (trocar no marco 7)
 
@@ -44,6 +44,7 @@ BIBLIOTECA = {
         "fonte": None,
         "furo": 0.9,
         "corpo": (12.0, 12.0),
+        "redondo": True,
         "pinos": {"1": (-3.8, 0, 1.7), "2": (3.8, 0, 1.7)},
     },
     "esp32_devkit": {

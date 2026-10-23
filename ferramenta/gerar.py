@@ -85,7 +85,8 @@ def montar(lido):
     for p in lido["pecas"].values():
         tipo = BIBLIOTECA[p["tipo"]]
         peca = {**p, "nome": tipo["nome"], "explica": tipo["explica"], "exemplo": tipo["fonte"] is None,
-                "corpo": {"w": tipo["corpo"][0], "h": tipo["corpo"][1]}, "pinos": []}
+                "corpo": {"w": tipo["corpo"][0], "h": tipo["corpo"][1], "redondo": tipo.get("redondo", False)},
+                "pinos": []}
         for n, (dx, dy, pad, *net) in tipo["pinos"].items():
             pino = {"n": n, "x": r(p["x"] + dx), "y": r(p["y"] + dy), "pad": forma(pad),
                     "furo": tipo["furo"], "net": net[0] if net else None}
