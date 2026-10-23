@@ -93,6 +93,7 @@ def montar(lido):
             peca["pinos"].append(pino)
             pinos[f"{p['ref']}.{n}"] = pino
         pecas.append(peca)
+    fixa = {p: pino["net"] for p, pino in pinos.items() if pino["net"]}   # pinos que nasceram numa net
 
     # nets: cada liga junta dois grupos; um grupo pode ter nome (GND) ou ganha um (N1, N2...)
     pai, nome = {}, {}
@@ -135,14 +136,32 @@ def montar(lido):
     for p, pino in pinos.items():
         pino["net"] = nome.get(raiz(p))
 
-    # trilhas em linha reta; ligar numa net vai ate o pino mais perto dessa net
+    # trilhas em linha reta. Ilha = pedaco de cobre ja ligado de verdade; pinos da mesma peca
+    # com a mesma net fixa (os GND do DevKit) ja nascem juntos, ligados por dentro da peca.
+    ilha = {}
+
+    def raiz_ilha(a):
+        while ilha.setdefault(a, a) != a:
+            a = ilha[a]
+        return a
+
+    primeiro = {}   # (ref, net) -> primeiro pino daquela peca com essa net fixa
+    for p, net in fixa.items():
+        ilha[raiz_ilha(p)] = raiz_ilha(primeiro.setdefault((p.split(".")[0], net), p))
+
+    def firme(p, net):   # a ilha de p tem um pino que nasceu nessa net (ex: GND do DevKit)?
+        return any(raiz_ilha(q) == raiz_ilha(p) for q, n in fixa.items() if n == net)
+
     def ponto(ponta, outra):
+        """ligar numa net vai ate o pino mais perto dela que esta em outra ilha (de preferencia uma firme)"""
         if ponta in pinos:
             return ponta
-        de = pinos[outra]
-        perto = [p for p, pino in pinos.items() if pino["net"] == nome[raiz(ponta)] and p != outra]
-        if not perto:
-            return None
+        net, de = nome[raiz(ponta)], pinos[outra]
+        mesma = [p for p, pino in pinos.items() if pino["net"] == net and p != outra]
+        fora = [p for p in mesma if raiz_ilha(p) != raiz_ilha(outra)]
+        if not fora:
+            return "ja" if mesma else None   # ja esta ligado nessa net por outro caminho
+        perto = [p for p in fora if firme(p, net)] or fora
         return min(perto, key=lambda p: (pinos[p]["x"] - de["x"]) ** 2 + (pinos[p]["y"] - de["y"]) ** 2)
 
     trilhas = []
@@ -151,6 +170,9 @@ def montar(lido):
         if a is None or b is None:
             net = lg["de"] if a is None else lg["ate"]
             raise ErroTxt(lg["linha"], f"{net} não tem nenhum outro pino na placa", [p.split(".")[0] for p in (a, b) if p])
+        if "ja" in (a, b):
+            continue
+        ilha[raiz_ilha(a)] = raiz_ilha(b)
         trilhas.append({"de": a, "ate": b, "x1": pinos[a]["x"], "y1": pinos[a]["y"],
                         "x2": pinos[b]["x"], "y2": pinos[b]["y"], "largura": TRILHA,
                         "net": pinos[a]["net"], "linha": lg["linha"]})
