@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Chassi</title>
+<title>pcbft</title>
+<link rel="icon" href="icone.svg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 :root {
@@ -221,7 +222,7 @@ svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; backgr
 <body>
 <header>
   <a class="voltar" id="voltar" href="./" aria-label="Voltar aos projetos" title="Projetos">←</a>
-  <span class="nome" id="nome">Chassi</span>
+  <span class="nome" id="nome">pcbft</span>
   <nav aria-label="Abas" id="abas">
     <button type="button" data-aba="processo">Processo</button>
     <button type="button" data-aba="thinking">Thinking</button>
@@ -577,7 +578,7 @@ function etiqueta(x, y, texto, fonte, fundo, cor) {
 // ---------- topo ----------
 function desenharTopo() {
   $('#nome').textContent = S.testes?.objetivo?.titulo || PLACA;
-  document.title = `${$('#nome').textContent} · Chassi`;
+  document.title = `${$('#nome').textContent} · pcbft`;
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-pressed', b.dataset.aba === S.aba));
   const t = S.testes, st = $('#status');
   if (!t) { st.textContent = 'sem testes'; st.style.color = 'var(--sec)'; }
@@ -935,6 +936,9 @@ function miniatura(m, o = {}) {
   return `<svg class="mini" viewBox="${-pad} ${-pad} ${m.placa.w + 2 * pad} ${m.placa.h + 2 * pad}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placa">${placaSVG(m, o)}</svg>`;
 }
 
+// a cotacao vale pra versao que foi pro site; se a placa mudou depois, e so historia
+function cotacaoAntiga(c, m) { return !!(c?.versao && m?.versao && c.versao !== m.versao); }
+
 function selosDe(t, m, cotacao) {
   let testes = '<span class="selo">sem testes</span>';
   if (t?.rodando) testes = '<span class="selo rodando">testes rodando…</span>';
@@ -943,9 +947,11 @@ function selosDe(t, m, cotacao) {
     testes = falhas ? `<span class="selo falha">✗ ${falhas} etapa falhou</span>` : '<span class="selo ok">✓ testes ok</span>';
   }
   let fabrica = '';
-  if (cotacao) fabrica = `<span class="selo ok">fábrica: ${esc(cotacao.situacao || 'cotado')}</span>`;
-  else if (m?.fabrica?.pronta) fabrica = '<span class="selo">fabrica.zip pronto</span>';
-  else if (m?.fabrica) fabrica = '<span class="selo">fabrica.zip travado</span>';
+  const passou = t && !t.rodando && !t.etapas.some(e => e.estado === 'falhou');
+  if (cotacao && cotacaoAntiga(cotacao, m)) fabrica = `<span class="selo">fábrica: cotação da v${esc(cotacao.versao)}, a placa mudou</span>`;
+  else if (cotacao) fabrica = `<span class="selo ok">fábrica: ${esc(cotacao.situacao || 'cotado')}</span>`;
+  else if (m?.fabrica?.pronta && passou) fabrica = '<span class="selo">fabrica.zip pronto</span>';
+  else if (m?.fabrica && !m.fabrica.pronta) fabrica = '<span class="selo">fabrica.zip travado</span>';
   return testes + fabrica;
 }
 
@@ -1028,9 +1034,10 @@ function desenharProcesso(main) {
       <div class="links"><a class="link" href="${BASE}saida/fabrica.zip" download>Baixar fabrica.zip ↓</a></div>`;
   }
   if (c) {
-    estado5 = 'ok';
+    const antiga = cotacaoAntiga(c, m);
+    estado5 = antiga ? estado5 : 'ok';
     corpo5 += `<div class="cotacao"><dl>
-        <dt>Site</dt><dd>${esc(c.site)}</dd><dt>Situação</dt><dd>${esc(c.situacao)}</dd>
+        <dt>Site</dt><dd>${esc(c.site)}</dd><dt>Situação</dt><dd>${esc(c.situacao)}${antiga ? ` · era a v${esc(c.versao)}; a placa mudou depois, cotar de novo` : ''}</dd>
         ${c.detectou ? `<dt>A fábrica leu</dt><dd>${esc(c.detectou)}</dd>` : ''}
         ${c.preco ? `<dt>Preço</dt><dd>${esc(c.preco)}</dd>` : ''}
         <dt>Quando</dt><dd>${esc(c.quando)}${c.versao ? ` · v${esc(c.versao)}` : ''}</dd></dl>
@@ -1278,7 +1285,7 @@ if (PLACA) {
   setInterval(atualizar, 1000);
 } else {   // tela de projetos: some com as abas e relê a lista de vez em quando
   for (const id of ['voltar', 'abas', 'direita']) $('#' + id).hidden = true;
-  document.title = 'Chassi';
+  document.title = 'pcbft';
   desenharInicio();
   setInterval(desenharInicio, 5000);
 }

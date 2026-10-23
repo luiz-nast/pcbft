@@ -480,6 +480,10 @@ def salvar(arq, estado):
 
 def rodar(pasta, frase=None):
     arq = pasta / "testes.json"
+    try:
+        anterior = json.loads(arq.read_text())
+    except (OSError, ValueError):
+        anterior = {}
     estado = {"versao": None, "rodando": True, "inicio": datetime.now().isoformat(timespec="seconds"),
               "etapas": [{"nome": n, "estado": "aguardando", "detalhe": ""} for n in ETAPAS],
               "requisitos": {}, "resumo": ""}
@@ -518,6 +522,8 @@ def rodar(pasta, frase=None):
         for etapa in estado["etapas"]:
             if etapa.get("onde"):
                 etapa["requisitos"] = [i["id"] for i in objetivo["itens"] if set(i["pecas"]) & set(etapa["onde"])]
+    if anterior.get("resumo") and anterior.get("versao") == estado["versao"]:
+        estado["resumo"] = anterior["resumo"]   # a placa nao mudou, o resumo do Claude continua valendo
     estado["rodando"] = False
     estado["fim"] = datetime.now().isoformat(timespec="seconds")
     salvar(arq, estado)
