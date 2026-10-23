@@ -124,6 +124,9 @@ def montar(lido):
         if pino["net"]:
             nome.setdefault(raiz(pino["net"]), pino["net"])
             junta(p, pino["net"], lido["pecas"][p.split(".")[0]]["linha"])
+    for ref, peca in lido["pecas"].items():   # pinos ligados por dentro da peca (ex: botao 1-2 e 3-4)
+        for a, b in BIBLIOTECA[peca["tipo"]].get("juntos", []):
+            junta(f"{ref}.{a}", f"{ref}.{b}", peca["linha"])
     for lg in lido["ligas"]:
         for ponta in (lg["de"], lg["ate"]):
             if "." in ponta and ponta not in pinos:
@@ -156,6 +159,9 @@ def montar(lido):
     primeiro = {}   # (ref, net) -> primeiro pino daquela peca com essa net fixa
     for p, net in fixa.items():
         ilha[raiz_ilha(p)] = raiz_ilha(primeiro.setdefault((p.split(".")[0], net), p))
+    for ref, peca in lido["pecas"].items():
+        for a, b in BIBLIOTECA[peca["tipo"]].get("juntos", []):
+            ilha[raiz_ilha(f"{ref}.{a}")] = raiz_ilha(f"{ref}.{b}")
 
     def firme(p, net):   # a ilha de p tem um pino que nasceu nessa net (ex: GND do DevKit)?
         return any(raiz_ilha(q) == raiz_ilha(p) for q, n in fixa.items() if n == net)

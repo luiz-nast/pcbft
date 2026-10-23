@@ -151,6 +151,8 @@ def nets_partidas(modelo):
         fixos = {}
         for n, (*_, net) in ((n, v) for n, v in BIBLIOTECA[peca["tipo"]]["pinos"].items() if len(v) == 4):
             pai[raiz(f"{peca['ref']}.{n}")] = raiz(fixos.setdefault(net, f"{peca['ref']}.{n}"))
+        for a, b in BIBLIOTECA[peca["tipo"]].get("juntos", []):
+            pai[raiz(f"{peca['ref']}.{a}")] = raiz(f"{peca['ref']}.{b}")
     pedacos = {}   # net -> {raiz: [pinos]}
     for peca in modelo["pecas"]:
         for p in peca["pinos"]:
@@ -313,8 +315,8 @@ def tira_foto(ctx):
 
 
 # requisitos: o requisitos.md declara o objetivo e, pra cada requisito, as pecas e como verificar
-CHECAGENS = {"existe": 1, "ligado": 2, "sem_pino_solto": 1}   # checagem -> quantos valores
-MOTIVOS = {"existe": "falta a peça", "ligado": "falta ligar", "sem_pino_solto": "pino solto"}
+CHECAGENS = {"existe": 1, "ligado": 2, "separado": 2, "sem_pino_solto": 1}   # checagem -> quantos valores
+MOTIVOS = {"existe": "falta a peça", "ligado": "falta ligar", "separado": "em curto", "sem_pino_solto": "pino solto"}
 
 
 def ler_requisitos(texto):
@@ -367,6 +369,8 @@ def checar(texto, modelo):
         return a[0] in pecas
     if cmd == "ligado":
         return bool(nets(a[0]) & nets(a[1]))
+    if cmd == "separado":   # nao pode ser a mesma net (ex: os dois lados de um botao)
+        return not nets(a[0]) & nets(a[1])
     if cmd == "sem_pino_solto":
         return a[0] in pecas and all(q["net"] and contagem[q["net"]] > 1 for q in pecas[a[0]]["pinos"])
 

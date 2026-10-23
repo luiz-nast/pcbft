@@ -48,7 +48,7 @@ Uma frase.
 
 ## R1 Título do requisito
 pecas: D1 R1
-verifica: ligado R1.2 D1.1      # existe REF | ligado A B | sem_pino_solto REF
+verifica: ligado R1.2 D1.1      # existe REF | ligado A B | separado A B | sem_pino_solto REF
 - sub-requisito em texto
 ```
 
@@ -56,7 +56,7 @@ O status é calculado pelo `testar.py`. Nunca escreva status à mão. Checagem n
 
 ## Biblioteca
 
-`ferramenta/biblioteca.py`: `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, fonte`. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo: a bancada avisa e o `fabrica.zip` não é gerado. Não sabe a medida? Pergunte ou deixe pendente.
+`ferramenta/biblioteca.py`: `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, juntos, fonte`. `juntos` = pinos ligados por dentro da peça (botão 1-2 e 3-4): ligar os dois lados do botão no mesmo pino deixa ele em curto. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo: a bancada avisa e o `fabrica.zip` não é gerado. Não sabe a medida? Pergunte ou deixe pendente.
 
 ## Regras de formato (já aprendidas)
 

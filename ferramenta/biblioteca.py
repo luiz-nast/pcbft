@@ -4,6 +4,7 @@
 #        pad = diametro (redondo) ou (largura, altura) (retangulo)
 # furo:  diametro do furo passante de cada pino; None = peca de superficie (SMD)
 # corpo: (largura, altura) do contorno da peca, pra desenhar; redondo: True se o corpo for redondo
+# juntos: pares de pinos ligados por dentro da peca (ex: os dois pinos de cada lado do botao)
 # fonte: datasheet de onde vieram os numeros
 #        None = valores de EXEMPLO, nao mandar pra fabrica (trocar no marco 7)
 
@@ -37,6 +38,7 @@ BIBLIOTECA = {
         "corpo": (6.0, 6.0),
         "pinos": {"1": (-3.25, 2.25, 1.8), "2": (3.25, 2.25, 1.8),
                   "3": (-3.25, -2.25, 1.8), "4": (3.25, -2.25, 1.8)},
+        "juntos": [("1", "2"), ("3", "4")],
     },
     "buzzer": {
         "nome": "Buzzer",
