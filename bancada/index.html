@@ -450,10 +450,13 @@ function inspecionar(m, sel) {
     const outros = pinosDaNet(m, pino.net).filter(x => x !== sel.nome);
     const linhas = [['Net', pino.net || '—'], ['Ligado a', outros.join(', ') || 'nada ainda'],
       ['Furo', pino.furo ? `${mm(pino.furo)} mm (passante)` : 'não (superfície)'], ['Posição', `${mm(pino.x)}, ${mm(pino.y)} mm`]];
+    const dentro = (p.juntos || []).filter(par => par.includes(n)).map(par => `${ref}.${par[0] === n ? par[1] : par[0]}`);
+    const fora = outros.filter(x => !dentro.includes(x));
     let explica = `Pino ${n} de ${ref} (${p.nome}). `;
+    if (dentro.length) explica += `Por dentro da peça ele já é ligado no ${dentro.join(', ')}. `;
     if (pino.net === 'GND') explica += 'Está no GND, o terra: o 0 V de referência de todo o circuito.';
-    else if (!outros.length) explica += 'Ainda não está ligado em nada.';
-    else explica += `A trilha leva o sinal dele até ${outros.join(', ')}; tudo isso é a mesma net (${pino.net}).`;
+    else if (!fora.length) explica += dentro.length ? 'Por fora, ainda não vai pra lugar nenhum.' : 'Ainda não está ligado em nada.';
+    else explica += `A trilha leva o sinal dele até ${fora.join(', ')}; tudo isso é a mesma net (${pino.net}).`;
     return { tipo: 'Pino', titulo: sel.nome, linhas, linha: p.linha, explica };
   }
   if (sel.k === 'trilha') {
