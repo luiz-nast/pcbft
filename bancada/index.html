@@ -653,7 +653,8 @@ function desenharProcesso(main) {
   const falha = t && !t.rodando && t.etapas.find(e => e.estado === 'falhou');
 
   const p1 = obj ? passo(1, reqs.length && reqs.every(i => i.status === 'ok') ? 'ok' : 'falha', 'Objetivo', `
-      <p class="destaque">${esc(obj.titulo)}</p>${obj.texto ? `<p>${esc(obj.texto)}</p>` : ''}
+      <p class="destaque">${esc(obj.titulo || PLACA)}</p>${obj.texto ? `<p>${esc(obj.texto)}</p>` : ''}
+      ${obj.erro ? `<p class="erro-req">${esc(obj.erro)}</p>` : ''}
       <ul class="reqs">${reqs.map(i => `<li class="${i.status === 'ok' ? 'ok' : 'falha'}">${i.status === 'ok' ? '✓' : '✗'} ${esc(i.id)} ${esc(i.titulo)}${i.status === 'ok' ? '' : ` · ${esc(i.motivo)}`}</li>`).join('')}</ul>
       <button type="button" class="link" data-aba="thinking">Ver os requisitos →</button>`)
     : passo(1, 'pendente', 'Objetivo', '<p>Ainda não tem <span class="mono">requisitos.md</span>.</p>');

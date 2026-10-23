@@ -171,7 +171,8 @@ def montar(lido):
         if ponta in pinos:
             return ponta
         net, de = nome[raiz(ponta)], pinos[outra]
-        mesma = [p for p, pino in pinos.items() if pino["net"] == net and p != outra]
+        ref = outra.split(".")[0]
+        mesma = [p for p, pino in pinos.items() if pino["net"] == net and p.split(".")[0] != ref]   # de outras pecas
         fora = [p for p in mesma if raiz_ilha(p) != raiz_ilha(outra)]
         if not fora:
             return "ja" if mesma else None   # ja esta ligado nessa net por outro caminho
@@ -367,13 +368,14 @@ def escrever(modelo, saida):
             (saida / nome).unlink(missing_ok=True)
         else:
             (saida / nome).write_text(texto)
-    zipado = saida / "fabrica.zip"
-    zipado.unlink(missing_ok=True)
-    if modelo["fabrica"]["pronta"]:
-        with zipfile.ZipFile(zipado, "w", zipfile.ZIP_DEFLATED) as z:
-            for nome, texto in arquivos.items():
-                if texto is not None and nome != "modelo.json":
-                    z.write(saida / nome, nome)
+    (saida / "fabrica.zip").unlink(missing_ok=True)   # so o testar.py cria, depois que tudo passa
+    return [nome for nome, texto in arquivos.items() if texto is not None and nome != "modelo.json"]
+
+
+def zipar(saida, nomes):
+    with zipfile.ZipFile(saida / "fabrica.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        for nome in nomes:
+            z.write(saida / nome, nome)
 
 
 # 6. versoes: cada placa.txt diferente vira vN.txt (+ vN.json pra bancada) e uma frase em versoes.json

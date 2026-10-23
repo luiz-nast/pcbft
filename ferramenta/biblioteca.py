@@ -108,7 +108,7 @@ BIBLIOTECA.update({
                  + KICAD + "Battery.pretty/BatteryHolder_Keystone_103_1x20mm.kicad_mod",
         "furo": 1.5,
         "corpo": (28.7, 22.8),
-        "pinos": {"1": (-12.25, 0, (3.0, 3.0)), "2": (8.24, 0, 3.0, "GND")},
+        "pinos": {"1": (-12.25, 0, (3.0, 3.0), "VBAT"), "2": (8.24, 0, 3.0, "GND")},
     },
 })
 

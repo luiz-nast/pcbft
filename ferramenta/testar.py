@@ -183,7 +183,7 @@ def confere_pecas(ctx):
 def confere_ligacoes(ctx):
     modelo = gerar.montar(ctx["lido"])
     ctx["estado"]["versao"] = gerar.salvar_versao(ctx["pasta"], ctx["texto"], modelo, ctx["frase"])
-    gerar.escrever(modelo, ctx["pasta"] / "saida")
+    ctx["arquivos"] = gerar.escrever(modelo, ctx["pasta"] / "saida")
     ctx["modelo"] = modelo
     ligados = {t[p] for t in modelo["trilhas"] for p in ("de", "ate")}
     sem, solto = [], []
@@ -198,6 +198,9 @@ def confere_ligacoes(ctx):
         raise Falhou(f"{' e '.join(sem)} sem ligação", sem, "sem ligação")
     if solto:
         raise Falhou(f"pino solto: {', '.join(solto)}", refs(*solto), "pino solto")
+    for peca in modelo["pecas"]:   # resistor, LED, pilha: os dois pinos na mesma net = a peca esta em curto
+        if len(peca["pinos"]) == 2 and peca["pinos"][0]["net"] and peca["pinos"][0]["net"] == peca["pinos"][1]["net"]:
+            raise Falhou(f"{peca['ref']} em curto: os dois pinos estão na net {peca['pinos'][0]['net']}", [peca["ref"]], "curto")
     partidas = nets_partidas(modelo)
     if partidas:
         net, pedacos = next(iter(partidas.items()))
@@ -351,10 +354,10 @@ def ler_requisitos(texto):
 def checar(texto, modelo):
     cmd, *a = texto.split()
     pecas = {p["ref"]: p for p in modelo["pecas"]}
-    contagem = {}
+    pecas_da_net = {}   # net -> pecas que tem pino nela
     for p in modelo["pecas"]:
         for pino in p["pinos"]:
-            contagem[pino["net"]] = contagem.get(pino["net"], 0) + 1
+            pecas_da_net.setdefault(pino["net"], set()).add(p["ref"])
 
     def nets(x):   # REF.PINO -> net do pino; REF -> nets de qualquer pino dela; senao e nome de net
         if "." in x:
@@ -371,8 +374,8 @@ def checar(texto, modelo):
         return bool(nets(a[0]) & nets(a[1]))
     if cmd == "separado":   # nao pode ser a mesma net (ex: os dois lados de um botao)
         return not nets(a[0]) & nets(a[1])
-    if cmd == "sem_pino_solto":
-        return a[0] in pecas and all(q["net"] and contagem[q["net"]] > 1 for q in pecas[a[0]]["pinos"])
+    if cmd == "sem_pino_solto":   # cada pino chega em alguma OUTRA peca (o par interno do botao nao conta)
+        return a[0] in pecas and all(q["net"] and pecas_da_net[q["net"]] - {a[0]} for q in pecas[a[0]]["pinos"])
 
 
 def avaliar_requisitos(pasta, modelo):
@@ -412,6 +415,7 @@ def rodar(pasta, frase=None):
               "etapas": [{"nome": n, "estado": "aguardando", "detalhe": ""} for n in ETAPAS],
               "requisitos": {}, "resumo": ""}
     ctx = {"pasta": pasta, "frase": frase, "estado": estado}
+    (pasta / "saida" / "fabrica.zip").unlink(missing_ok=True)
     salvar(arq, estado)
     funcoes = [le_txt, confere_pecas, confere_ligacoes, regras_fabrica, rele_gerber, tira_foto]
     for etapa, funcao in zip(estado["etapas"], funcoes):
@@ -433,6 +437,9 @@ def rodar(pasta, frase=None):
             for resto in estado["etapas"][estado["etapas"].index(etapa) + 1:]:
                 resto["estado"] = "nao_rodou"
             break
+    tudo_ok = all(e["estado"] == "ok" for e in estado["etapas"])
+    if tudo_ok and ctx["modelo"]["fabrica"]["pronta"]:
+        gerar.zipar(pasta / "saida", ctx["arquivos"])   # fabrica.zip so existe se passou em tudo
     objetivo = avaliar_requisitos(pasta, ctx.get("modelo"))
     if objetivo:
         estado["objetivo"] = objetivo
