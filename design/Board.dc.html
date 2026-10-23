@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Placa de estudo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="position: relative; width: 720px; height: 480px; font-family: 'IBM Plex Mono', monospace; color: #F4F4F2">
+<div style="position: absolute; inset: 0; background: #1F6F4A; border: 2px solid #C8CDD2; border-radius: 6px"></div>
+
+<div style="position: absolute; inset: 0; opacity: {{restOpacity}}">
+<div style="position: absolute; left: 23px; top: 23px; width: 38px; height: 38px; border-radius: 50%; background: #0E1012; border: 1.5px solid #C8CDD2; box-sizing: border-box"></div>
+<div style="position: absolute; left: 659px; top: 23px; width: 38px; height: 38px; border-radius: 50%; background: #0E1012; border: 1.5px solid #C8CDD2; box-sizing: border-box"></div>
+<div style="position: absolute; left: 23px; top: 419px; width: 38px; height: 38px; border-radius: 50%; background: #0E1012; border: 1.5px solid #C8CDD2; box-sizing: border-box"></div>
+<div style="position: absolute; left: 659px; top: 419px; width: 38px; height: 38px; border-radius: 50%; background: #0E1012; border: 1.5px solid #C8CDD2; box-sizing: border-box"></div>
+
+<sc-if value="{{showV2}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 110px; top: 148px; width: 350px; height: 160px; border: 1.5px dashed #C8CDD2; border-radius: 6px; box-sizing: border-box; display: flex; align-items: center; justify-content: center">
+<span style="font-size: 13px">ESP32 DevKit</span>
+</div>
+<div style="position: absolute; left: 126px; top: 162px; display: flex; gap: 12px">
+<sc-for list="{{pins}}" as="p" hint-placeholder-count="15">
+<span style="width: 10px; height: 10px; border-radius: 50%; background: #E0A458"></span>
+</sc-for>
+</div>
+<div style="position: absolute; left: 126px; top: 288px; display: flex; gap: 12px">
+<sc-for list="{{pins}}" as="p" hint-placeholder-count="15">
+<span style="width: 10px; height: 10px; border-radius: 50%; background: #E0A458"></span>
+</sc-for>
+</div>
+
+<div style="position: absolute; left: 540px; top: 140px; width: 18px; height: 22px; background: #E0A458; border-radius: 2px"></div>
+<div style="position: absolute; left: 558px; top: 149px; width: 42px; height: 4px; background: #E0A458"></div>
+<div style="position: absolute; left: 600px; top: 140px; width: 18px; height: 22px; background: #E0A458; border-radius: 2px"></div>
+<div style="position: absolute; left: 640px; top: 140px; width: 18px; height: 22px; background: #E0A458; border-radius: 2px"></div>
+<span style="position: absolute; left: 620px; top: 114px; font-size: 13px">D1</span>
+
+<div style="position: absolute; left: 647px; top: 162px; width: 4px; height: 292px; background: #E0A458"></div>
+<div style="position: absolute; left: 129px; top: 450px; width: 522px; height: 4px; background: #E0A458"></div>
+<div style="position: absolute; left: 127px; top: 298px; width: 4px; height: 156px; background: #E0A458"></div>
+
+<div style="position: absolute; left: 512px; top: 292px; width: 96px; height: 86px; border: 1px solid #F4F4F2; border-radius: 4px; box-sizing: border-box"></div>
+<div style="position: absolute; left: 520px; top: 300px; width: 20px; height: 20px; background: #E0A458; border-radius: 2px"></div>
+<div style="position: absolute; left: 580px; top: 300px; width: 20px; height: 20px; background: #E0A458; border-radius: 2px"></div>
+<div style="position: absolute; left: 520px; top: 350px; width: 20px; height: 20px; background: #E0A458; border-radius: 2px"></div>
+<div style="position: absolute; left: 580px; top: 350px; width: 20px; height: 20px; background: #E0A458; border-radius: 2px"></div>
+<span style="position: absolute; left: 542px; top: 384px; font-size: 13px">SW1</span>
+</sc-if>
+
+<sc-if value="{{showV3}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 250px; top: 336px; width: 84px; height: 84px; border: 1.5px solid #F4F4F2; border-radius: 50%; box-sizing: border-box"></div>
+<div style="position: absolute; left: 272px; top: 368px; width: 12px; height: 20px; background: #E0A458; border-radius: 2px"></div>
+<div style="position: absolute; left: 300px; top: 368px; width: 12px; height: 20px; background: #E0A458; border-radius: 2px"></div>
+<span style="position: absolute; left: 279px; top: 424px; font-size: 13px">BZ1</span>
+</sc-if>
+</div>
+
+<sc-if value="{{showV2}}" hint-placeholder-val="{{ true }}">
+<div style="position: absolute; left: 195px; top: 108px; width: 4px; height: 56px; background: #E0A458"></div>
+<div style="position: absolute; left: 195px; top: 108px; width: 316px; height: 4px; background: #E0A458"></div>
+<div style="position: absolute; left: 507px; top: 108px; width: 4px; height: 34px; background: #E0A458"></div>
+<div style="position: absolute; left: 500px; top: 140px; width: 18px; height: 22px; background: #E0A458; border-radius: 2px"></div>
+<div style="position: absolute; left: 192px; top: 162px; width: 10px; height: 10px; border-radius: 50%; background: #E0A458"></div>
+<span style="position: absolute; left: 520px; top: 114px; font-size: 13px">R1</span>
+</sc-if>
+
+<sc-if value="{{showPin}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 186px; top: 156px; width: 22px; height: 22px; border: 2px solid #FFFFFF; border-radius: 50%; box-sizing: border-box"></div>
+</sc-if>
+<sc-if value="{{showHover}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 504px; top: 284px; width: 112px; height: 102px; border: 2px solid #8EC5FF; border-radius: 8px; box-sizing: border-box"></div>
+</sc-if>
+<sc-if value="{{showNovo}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 240px; top: 326px; width: 104px; height: 104px; border: 2px dashed #6FD39B; border-radius: 50%; box-sizing: border-box"></div>
+<span style="position: absolute; left: 350px; top: 336px; font-size: 12px; font-weight: 500; color: #0E2A1A; background: #6FD39B; padding: 2px 8px; border-radius: 999px">+ novo</span>
+</sc-if>
+<sc-if value="{{showErros}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: 498px; top: 278px; width: 124px; height: 114px; border: 2.5px dashed #FF6B5E; border-radius: 12px; box-sizing: border-box"></div>
+<span style="position: absolute; left: 520px; top: 252px; font-size: 12px; font-weight: 500; color: #2A0B08; background: #FF8A80; padding: 2px 8px; border-radius: 999px">sem ligação</span>
+<div style="position: absolute; left: 236px; top: 322px; width: 112px; height: 112px; border: 2.5px dashed #FF6B5E; border-radius: 50%; box-sizing: border-box"></div>
+<span style="position: absolute; left: 354px; top: 340px; font-size: 12px; font-weight: 500; color: #2A0B08; background: #FF8A80; padding: 2px 8px; border-radius: 999px">sem ligação</span>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"focus":{"editor":"enum","options":["nada","net"],"default":"nada"},"pin":{"editor":"boolean","default":false},"hover":{"editor":"boolean","default":false},"novo":{"editor":"boolean","default":false},"versao":{"editor":"int","min":1,"max":3,"default":3},"erros":{"editor":"boolean","default":false},"$preview":{"width":720,"height":480}}'>
+class Component extends DCLogic {
+renderVals() {
+const p = this.props;
+const v = p.versao ?? 3;
+return {
+showV2: v >= 2,
+showV3: v >= 3,
+restOpacity: (p.focus ?? 'nada') === 'net' ? '0.18' : '1',
+showPin: p.pin ?? false,
+showHover: p.hover ?? false,
+showNovo: p.novo ?? false,
+showErros: p.erros ?? false,
+pins: Array.from({ length: 15 }, (_, i) => ({ id: i }))
+};
+}
+}
+</script>
+</body>
+</html>

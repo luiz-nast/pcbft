@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Bancada de placa</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0;background:#14171A}
+a{color:#E0A458}a:hover{color:#F0C080}
+</style>
+</helmet>
+<div style="min-height: 800px; background: #14171A; color: #E8EAED; font-family: 'IBM Plex Sans', system-ui, sans-serif; display: flex; flex-direction: column">
+
+<header style="position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; border-bottom: 1px solid #2A3036; min-height: 56px">
+<span style="font-size: 15px; font-weight: 600; flex: 1 1 200px">[NOME DO PROJETO]</span>
+
+<nav aria-label="Abas" style="display: flex; gap: 4px; align-self: stretch">
+<button type="button" aria-pressed="{{tabThinking}}" onClick="{{irThinking}}" style="min-height: 56px; padding: 0 16px; background: transparent; color: {{corThinking}}; border: 0; border-bottom: 2px solid {{linhaThinking}}; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">Thinking</button>
+<button type="button" aria-pressed="{{tabProjeto}}" onClick="{{irProjeto}}" style="min-height: 56px; padding: 0 16px; background: transparent; color: {{corProjeto}}; border: 0; border-bottom: 2px solid {{linhaProjeto}}; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">Projeto</button>
+<button type="button" aria-pressed="{{tabTestes}}" onClick="{{irTestes}}" style="min-height: 56px; padding: 0 16px; background: transparent; color: {{corTestes}}; border: 0; border-bottom: 2px solid {{linhaTestes}}; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer">Testes</button>
+</nav>
+
+<div style="flex: 1 1 200px; display: flex; justify-content: flex-end; align-items: center; gap: 8px">
+<button type="button" onClick="{{irTestes}}" style="min-height: 36px; padding: 0 12px; background: transparent; color: {{statusCor}}; border: 1px solid #2A3036; border-radius: 999px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer">{{statusTexto}}</button>
+<button type="button" onClick="{{toggleVersoes}}" aria-expanded="{{versoesAberto}}" style="min-height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: transparent; color: #C8CDD2; border: 1px solid #2A3036; border-radius: 999px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5V12l3 2"></path></svg>
+<span>{{versaoLabel}}</span>
+</button>
+</div>
+
+<sc-if value="{{versoesAberto}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; right: 20px; top: 60px; z-index: 20; width: 280px; display: flex; flex-direction: column; gap: 4px; background: #1C2024; border: 1px solid #3A424A; border-radius: 10px; padding: 6px">
+<sc-for list="{{versoes}}" as="vv" hint-placeholder-count="3">
+<button type="button" onClick="{{vv.pick}}" style="display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: {{vv.bg}}; color: #E8EAED; border: 0; border-radius: 8px; font: inherit; text-align: left; cursor: pointer">
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9AA3AD">{{vv.nome}}</span>
+<span style="font-size: 13px">{{vv.desc}}</span>
+</button>
+</sc-for>
+<label style="display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 10px; font-size: 13px; color: #C8CDD2; border-top: 1px solid #2A3036; margin-top: 4px; cursor: pointer">
+<input type="checkbox" checked="{{destacar}}" onChange="{{toggleDestacar}}" style="width: 16px; height: 16px; accent-color: #6FD39B">
+<span>Destacar o que mudou na v3</span>
+</label>
+</div>
+</sc-if>
+</header>
+
+<sc-if value="{{tabThinking}}" hint-placeholder-val="{{ true }}">
+<section aria-label="Thinking" style="flex: 1; background: #0E1012; overflow: auto; padding: 32px 24px 48px; display: flex; flex-direction: column; align-items: center; gap: 28px">
+<div style="display: flex; gap: 2px; background: #1C2024; border: 1px solid #2A3036; border-radius: 999px; padding: 3px">
+<button type="button" aria-pressed="{{simples}}" onClick="{{modoSimples}}" style="min-height: 36px; padding: 0 16px; background: {{bgSimples}}; color: #E8EAED; border: 0; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer">Simples</button>
+<button type="button" aria-pressed="{{detalhado}}" onClick="{{modoDetalhado}}" style="min-height: 36px; padding: 0 16px; background: {{bgDetalhado}}; color: #E8EAED; border: 0; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer">Detalhado</button>
+</div>
+
+<div style="position: relative; width: 1000px; flex: none">
+<div style="position: absolute; left: 320px; top: 0; width: 360px; box-sizing: border-box; background: #1C2024; border: 1.5px solid #E8EAED; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9AA3AD">Objetivo</span>
+<span style="font-size: 17px; font-weight: 600">Placa de estudo pro ESP32</span>
+<span style="font-size: 13px; color: #C8CDD2; line-height: 1.5">Encaixa o DevKit e já vem com LED, botão e buzzer.</span>
+</div>
+<div style="position: absolute; left: 499px; top: 112px; width: 2px; height: 24px; background: #3A424A"></div>
+<div style="position: absolute; left: 110px; top: 136px; width: 780px; height: 2px; background: #3A424A"></div>
+<div style="position: absolute; left: 109px; top: 136px; width: 2px; height: 24px; background: #3A424A"></div>
+<div style="position: absolute; left: 369px; top: 136px; width: 2px; height: 24px; background: #3A424A"></div>
+<div style="position: absolute; left: 629px; top: 136px; width: 2px; height: 24px; background: #3A424A"></div>
+<div style="position: absolute; left: 889px; top: 136px; width: 2px; height: 24px; background: #3A424A"></div>
+
+<div style="padding-top: 160px; display: flex; gap: 40px; align-items: flex-start">
+
+<div style="width: 220px; box-sizing: border-box; background: #1C2024; border: 1px solid #2A3036; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<span style="align-self: flex-start; font-size: 11px; font-weight: 600; color: #0E2A1A; background: #6FD39B; padding: 2px 8px; border-radius: 999px">ok</span>
+<span style="font-size: 15px; font-weight: 600; line-height: 1.35">Encaixar o DevKit</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9AA3AD">DevKit · furos</span>
+<sc-if value="{{detalhado}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2A3036; padding-top: 10px; font-size: 13px; color: #C8CDD2; line-height: 1.4">
+<span>Furos na distância dos pinos do DevKit</span>
+<span>Placa presa com 4 parafusos M3</span>
+</div>
+</sc-if>
+<button type="button" onClick="{{verDevKit}}" style="align-self: flex-start; min-height: 32px; padding: 0; background: transparent; color: #E0A458; border: 0; font: inherit; font-size: 13px; cursor: pointer">Ver na placa →</button>
+</div>
+
+<div style="width: 220px; box-sizing: border-box; background: #1C2024; border: 1px solid #2A3036; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<span style="align-self: flex-start; font-size: 11px; font-weight: 600; color: #0E2A1A; background: #6FD39B; padding: 2px 8px; border-radius: 999px">ok</span>
+<span style="font-size: 15px; font-weight: 600; line-height: 1.35">LED acende sem queimar</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9AA3AD">D1 · R1</span>
+<sc-if value="{{detalhado}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2A3036; padding-top: 10px; font-size: 13px; color: #C8CDD2; line-height: 1.4">
+<span>R1 limita a corrente</span>
+<span>LED montado do lado certo</span>
+<span>Ligado no pino DevKit.4</span>
+</div>
+</sc-if>
+<button type="button" onClick="{{verD1}}" style="align-self: flex-start; min-height: 32px; padding: 0; background: transparent; color: #E0A458; border: 0; font: inherit; font-size: 13px; cursor: pointer">Ver na placa →</button>
+</div>
+
+<div style="width: 220px; box-sizing: border-box; background: #1C2024; border: 1px solid #5A4527; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<span style="align-self: flex-start; font-size: 11px; font-weight: 600; color: #2A1A05; background: #E0A458; padding: 2px 8px; border-radius: 999px">falta ligar</span>
+<span style="font-size: 15px; font-weight: 600; line-height: 1.35">ESP32 lê o botão</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9AA3AD">SW1</span>
+<sc-if value="{{detalhado}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2A3036; padding-top: 10px; font-size: 13px; color: #C8CDD2; line-height: 1.4">
+<span>Um lado do SW1 num pino do DevKit</span>
+<span>O outro lado no GND</span>
+</div>
+</sc-if>
+<button type="button" onClick="{{verSW1}}" style="align-self: flex-start; min-height: 32px; padding: 0; background: transparent; color: #E0A458; border: 0; font: inherit; font-size: 13px; cursor: pointer">Ver na placa →</button>
+</div>
+
+<div style="width: 220px; box-sizing: border-box; background: #1C2024; border: 1px solid #5A4527; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+<span style="align-self: flex-start; font-size: 11px; font-weight: 600; color: #2A1A05; background: #E0A458; padding: 2px 8px; border-radius: 999px">falta ligar</span>
+<span style="font-size: 15px; font-weight: 600; line-height: 1.35">Buzzer faz som</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9AA3AD">BZ1</span>
+<sc-if value="{{detalhado}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #2A3036; padding-top: 10px; font-size: 13px; color: #C8CDD2; line-height: 1.4">
+<span>Um lado do BZ1 num pino do DevKit</span>
+<span>O outro lado no GND</span>
+</div>
+</sc-if>
+<button type="button" onClick="{{verBZ1}}" style="align-self: flex-start; min-height: 32px; padding: 0; background: transparent; color: #E0A458; border: 0; font: inherit; font-size: 13px; cursor: pointer">Ver na placa →</button>
+</div>
+
+</div>
+</div>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8A939C">requisitos.md · status calculado pelos testes, sem IA</span>
+</section>
+</sc-if>
+
+<sc-if value="{{tabProjeto}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-wrap: wrap; flex: 1">
+<section aria-label="Placa" onMouseDown="{{down}}" onMouseMove="{{moveArea}}" onMouseUp="{{up}}" onMouseLeave="{{leave}}" style="flex: 999 1 600px; min-width: 0; min-height: 600px; position: relative; overflow: hidden; background: #0E1012; display: flex; align-items: center; justify-content: center; cursor: {{cursor}}; user-select: none">
+
+<div style="position: absolute; left: 16px; top: 16px; z-index: 5; display: flex; flex-direction: column; gap: 4px; background: #1C2024; border: 1px solid #2A3036; border-radius: 10px; padding: 4px">
+<button type="button" aria-label="Seta" aria-pressed="{{isSeta}}" onClick="{{modoSeta}}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: {{setaBg}}; color: #F4F4F2; border: 0; border-radius: 8px; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 8-6.5 1.5L10 19z"></path></svg>
+</button>
+<button type="button" aria-label="Mão (arrastar)" aria-pressed="{{isMao}}" onClick="{{modoMao}}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: {{maoBg}}; color: #F4F4F2; border: 0; border-radius: 8px; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11"></path><path d="M11 5a1.5 1.5 0 0 1 3 0v6"></path><path d="M14 6.5a1.5 1.5 0 0 1 3 0V12"></path><path d="M17 9.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-5-2.7L4.3 14a1.5 1.5 0 0 1 2.4-1.8L8 13.5"></path></svg>
+</button>
+<div style="height: 1px; background: #2A3036; margin: 4px 6px"></div>
+<button type="button" aria-label="Aproximar" onClick="{{zoomIn}}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: transparent; color: #C8CDD2; border: 0; border-radius: 8px; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+<button type="button" aria-label="Afastar" onClick="{{zoomOut}}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: transparent; color: #C8CDD2; border: 0; border-radius: 8px; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg>
+</button>
+<button type="button" aria-label="Centralizar" onClick="{{centralizar}}" style="width: 44px; height: 32px; background: transparent; color: #9AA3AD; border: 0; border-radius: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer">{{zoomLabel}}</button>
+</div>
+
+<div onMouseMove="{{moveBoard}}" onMouseLeave="{{sairBoard}}" onClick="{{clickBoard}}" style="position: relative; width: 720px; height: 480px; flex: none; transform: translate({{panX}}px, {{panY}}px) scale({{zoom}}); transform-origin: center center">
+<dc-import name="Board" focus="{{focus}}" pin="{{pinSel}}" hover="{{false}}" novo="{{novo}}" versao="{{versao}}" hint-size="720px,480px"></dc-import>
+</div>
+
+<sc-if value="{{hudShow}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; left: {{hudX}}px; top: {{hudY}}px; z-index: 6; pointer-events: none; display: flex; flex-direction: column; gap: 2px; background: rgba(14,16,18,0.92); border: 1px solid #3A424A; border-radius: 8px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; white-space: nowrap">
+<span style="color: #F4F4F2">{{hudNome}}</span>
+<span style="color: #9AA3AD">x {{mmX}}  y {{mmY}} mm</span>
+</div>
+</sc-if>
+</section>
+
+<sc-if value="{{temSel}}" hint-placeholder-val="{{ false }}">
+<aside aria-label="Inspetor" style="flex: 1 1 320px; padding: 20px; border-left: 1px solid #2A3036; display: flex; flex-direction: column; gap: 16px; font-size: 14px">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; color: #9AA3AD">{{info.tipo}}</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 500">{{info.titulo}}</span>
+</div>
+<button type="button" aria-label="Fechar inspetor" onClick="{{fechar}}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: transparent; color: #9AA3AD; border: 0; border-radius: 8px; cursor: pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px">
+<sc-for list="{{info.linhas}}" as="l" hint-placeholder-count="2">
+<span style="color: #9AA3AD">{{l.k}}</span><span style="font-family: 'IBM Plex Mono', monospace">{{l.v}}</span>
+</sc-for>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span style="font-size: 12px; color: #9AA3AD">Vem de placa.txt, linha {{info.linha}}</span>
+<code style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #1C2024; padding: 8px 10px; border-radius: 6px">{{info.codigo}}</code>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px; background: #1A2230; border: 1px solid #2C3A52; border-radius: 10px; padding: 12px 14px">
+<span style="font-size: 12px; font-weight: 600; color: #8EC5FF">O que é isso?</span>
+<p style="margin: 0; line-height: 1.55">{{info.explica}}</p>
+</div>
+<span style="font-size: 12px; color: #9AA3AD">Requisito: {{info.req}}</span>
+</aside>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{tabTestes}}" hint-placeholder-val="{{ false }}">
+<section aria-label="Testes" style="flex: 1; background: #0E1012; overflow: auto; padding: 32px 24px 48px; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 32px">
+<div style="flex: 1 1 420px; max-width: 560px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 600">Rodada de testes</span>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9AA3AD">{{versaoLabel}} · testes.json</span>
+</div>
+<button type="button" onClick="{{simular}}" style="min-height: 40px; padding: 0 14px; background: transparent; color: #E8EAED; border: 1px solid #3A424A; border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer">Simular rodada</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{etapas}}" as="et" hint-placeholder-count="6">
+<div style="display: flex; align-items: center; gap: 14px; padding: 12px 16px; background: #1C2024; border: 1px solid {{et.borda}}; border-radius: 10px">
+<span style="width: 26px; height: 26px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: {{et.bolaBg}}; color: {{et.bolaCor}}; font-size: 13px; font-weight: 600">{{et.icone}}</span>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 14px; font-weight: 500">{{et.nome}}</span>
+<span style="font-size: 13px; color: #9AA3AD">{{et.texto}}</span>
+</div>
+<span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: {{et.estadoCor}}">{{et.estado}}</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{fimRodada}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 6px; background: #1A2230; border: 1px solid #2C3A52; border-radius: 10px; padding: 14px 16px">
+<span style="font-size: 12px; font-weight: 600; color: #8EC5FF">Resumo do Claude · só no final</span>
+<p style="margin: 0; font-size: 14px; line-height: 1.55">As etapas 1 e 2 passaram. Parei na 3: o botão (SW1) e o buzzer (BZ1) não estão ligados em nada. Quer que eu ligue cada um num pino livre do DevKit e no GND?</p>
+</div>
+</sc-if>
+</div>
+<div style="flex: 0 1 540px; display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 13px; font-weight: 600; color: #9AA3AD">{{placaTitulo}}</span>
+<div style="width: 540px; height: 360px; overflow: hidden; border-radius: 8px; flex: none">
+<div style="width: 720px; height: 480px; transform: scale(0.75); transform-origin: top left">
+<dc-import name="Board" focus="nada" pin="{{false}}" hover="{{false}}" novo="{{false}}" versao="{{versao}}" erros="{{mostrarErros}}" hint-size="720px,480px"></dc-import>
+</div>
+</div>
+<sc-if value="{{mostrarErros}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; gap: 16px">
+<button type="button" onClick="{{verSW1}}" style="min-height: 36px; padding: 0; background: transparent; color: #E0A458; border: 0; font: inherit; font-size: 13px; cursor: pointer">Abrir SW1 no Projeto →</button>
+<button type="button" onClick="{{verBZ1}}" style="min-height: 36px; padding: 0; background: transparent; color: #E0A458; border: 0; font: inherit; font-size: 13px; cursor: pointer">Abrir BZ1 no Projeto →</button>
+</div>
+</sc-if>
+</div>
+</section>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { tab: 'thinking', detalhado: false, modo: 'seta', zoom: 1, panX: 0, panY: 0, arrastando: false, ultX: 0, ultY: 0, hudShow: false, hudX: 0, hudY: 0, bx: 0, by: 0, alvo: '', sel: '', versao: 3, versoesAberto: false, destacar: false, atual: 2, falhou: true, rodando: false };
+this.timer = null;
+}
+componentWillUnmount() {
+if (this.timer) clearTimeout(this.timer);
+}
+acertar(x, y) {
+const v = this.state.versao;
+const perto = (cx, cy, r) => (x - cx) * (x - cx) + (y - cy) * (y - cy) < r * r;
+if (perto(42, 42, 19) || perto(678, 42, 19) || perto(42, 438, 19) || perto(678, 438, 19)) return 'Furo';
+if (v < 2) return '';
+if (perto(197, 167, 10)) return 'pin';
+if (x >= 496 && x <= 562 && y >= 136 && y <= 166) return 'R1';
+if (x >= 596 && x <= 662 && y >= 136 && y <= 166) return 'D1';
+if (x >= 512 && x <= 608 && y >= 292 && y <= 378) return 'SW1';
+if (v >= 3 && perto(292, 378, 44)) return 'BZ1';
+if (x >= 110 && x <= 460 && y >= 148 && y <= 308) return 'DevKit';
+return '';
+}
+etapasBase() {
+return [
+{ nome: 'Lê o txt', ok: true, texto: '10 linhas, nenhum erro de digitação' },
+{ nome: 'Confere peças', ok: true, texto: '5 peças, todas existem na biblioteca' },
+{ nome: 'Confere ligações', ok: false, texto: 'SW1 e BZ1 sem ligação · requisitos 3 e 4' },
+{ nome: 'Regras da fábrica', ok: true, texto: 'trilha, furo e distância da borda' },
+{ nome: 'Relê o Gerber', ok: true, texto: 'arquivos válidos' },
+{ nome: 'Tira foto da placa', ok: true, texto: 'Claude olha a imagem' }
+];
+}
+passo() {
+const base = this.etapasBase();
+const i = this.state.atual;
+if (!base[i].ok) { this.setState({ rodando: false, falhou: true }); return; }
+if (i + 1 >= base.length) { this.setState({ rodando: false, falhou: false, atual: base.length }); return; }
+this.setState({ atual: i + 1 });
+this.timer = setTimeout(() => this.passo(), 700);
+}
+renderVals() {
+const s = this.state;
+const tab = (t) => s.tab === t;
+const ir = (t) => () => this.setState({ tab: t, versoesAberto: false });
+const ver = (p) => () => this.setState({ tab: 'projeto', sel: p, versoesAberto: false });
+const nomes = { '': 'Placa', Furo: 'Furo de fixação', pin: 'DevKit.4', R1: 'R1', D1: 'D1', SW1: 'SW1', BZ1: 'BZ1', DevKit: 'DevKit' };
+const infos = {
+pin: { tipo: 'Pino', titulo: 'DevKit.4', linha: 6, codigo: 'liga DevKit.4 R1.1', linhas: [{ k: 'Net', v: 'LED' }, { k: 'Ligado a', v: 'R1.1' }], explica: 'Este pino manda o sinal que acende o LED.', req: 'LED acende sem queimar' },
+R1: { tipo: 'Resistor', titulo: 'R1', linha: 4, codigo: 'peca R1 resistor 44 27', linhas: [{ k: 'Pino 1', v: 'DevKit.4' }, { k: 'Pino 2', v: 'D1.1' }], explica: 'Fica no caminho do LED pra limitar a corrente. Sem ele, o LED queima.', req: 'LED acende sem queimar' },
+D1: { tipo: 'LED', titulo: 'D1', linha: 5, codigo: 'peca D1 led 52 27', linhas: [{ k: 'Pino 1', v: 'R1.2' }, { k: 'Pino 2', v: 'GND' }], explica: 'Acende quando a corrente passa por ele. Tem lado certo: + de um lado, − do outro.', req: 'LED acende sem queimar' },
+SW1: { tipo: 'Botão', titulo: 'SW1', linha: 9, codigo: 'peca SW1 botao 47 12', linhas: [{ k: 'Pinos', v: '4' }, { k: 'Ligações', v: 'nenhuma ainda' }], explica: 'Quando você aperta, ele junta dois lados do circuito. O ESP32 lê se está apertado ou não.', req: 'ESP32 lê o botão' },
+BZ1: { tipo: 'Buzzer', titulo: 'BZ1', linha: 10, codigo: 'peca BZ1 buzzer 24 8', linhas: [{ k: 'Pinos', v: '2' }, { k: 'Ligações', v: 'nenhuma ainda' }], explica: 'Faz som quando recebe sinal. Entrou na v3 e ainda não foi ligado em nada.', req: 'Buzzer faz som' },
+DevKit: { tipo: 'Módulo', titulo: 'DevKit', linha: 3, codigo: 'peca DevKit esp32_devkit 24 21', linhas: [{ k: 'Pinos', v: '30' }, { k: 'Usados', v: '1' }], explica: 'A plaquinha pronta com o ESP32. Ela encaixa nesses furos e é o cérebro do circuito.', req: 'Encaixar o DevKit' },
+Furo: { tipo: 'Furo', titulo: 'Fixação', linha: 2, codigo: 'furos cantos 3.2', linhas: [{ k: 'Diâmetro', v: '3,2 mm' }, { k: 'Parafuso', v: 'M3' }], explica: 'Furo pra prender a placa numa caixa ou base com parafuso M3.', req: 'Encaixar o DevKit' }
+};
+const versoesInfo = [
+{ n: 1, nome: 'v1', desc: 'Contorno e furos' },
+{ n: 2, nome: 'v2', desc: 'DevKit, LED, resistor e botão' },
+{ n: 3, nome: 'v3 · atual', desc: 'Claude adicionou o buzzer' }
+];
+const area = (e) => e.currentTarget.getBoundingClientRect();
+const etapas = this.etapasBase().map((et, i) => {
+let estado = 'aguardando';
+if (i < s.atual) estado = 'ok';
+else if (i === s.atual) estado = s.rodando ? 'rodando' : (s.falhou ? 'falhou' : 'ok');
+else estado = s.falhou && !s.rodando ? 'não rodou' : 'aguardando';
+const vis = {
+ok: { icone: '✓', bolaBg: '#173A26', bolaCor: '#6FD39B', borda: '#2A3036', estadoCor: '#6FD39B' },
+rodando: { icone: '…', bolaBg: '#3A2E17', bolaCor: '#E0A458', borda: '#5A4527', estadoCor: '#E0A458' },
+falhou: { icone: '✗', bolaBg: '#3A1A1A', bolaCor: '#FF8A80', borda: '#6B2A2A', estadoCor: '#FF8A80' },
+'não rodou': { icone: '·', bolaBg: '#22272C', bolaCor: '#6B747D', borda: '#2A3036', estadoCor: '#8A939C' },
+aguardando: { icone: '·', bolaBg: '#22272C', bolaCor: '#6B747D', borda: '#2A3036', estadoCor: '#8A939C' }
+}[estado];
+return { ...et, ...vis, estado: estado, texto: estado === 'ok' || estado === 'falhou' ? et.texto : '' };
+});
+const statusTexto = s.rodando ? 'testes rodando…' : (s.falhou ? '✗ 1 etapa falhou' : '✓ testes ok');
+const statusCor = s.rodando ? '#E0A458' : (s.falhou ? '#FF8A80' : '#6FD39B');
+return {
+tabThinking: tab('thinking'), tabProjeto: tab('projeto'), tabTestes: tab('testes'),
+irThinking: ir('thinking'), irProjeto: ir('projeto'), irTestes: ir('testes'),
+corThinking: tab('thinking') ? '#F4F4F2' : '#9AA3AD', linhaThinking: tab('thinking') ? '#F4F4F2' : 'transparent',
+corProjeto: tab('projeto') ? '#F4F4F2' : '#9AA3AD', linhaProjeto: tab('projeto') ? '#F4F4F2' : 'transparent',
+corTestes: tab('testes') ? '#F4F4F2' : '#9AA3AD', linhaTestes: tab('testes') ? '#F4F4F2' : 'transparent',
+statusTexto: statusTexto, statusCor: statusCor,
+simples: !s.detalhado, detalhado: s.detalhado,
+bgSimples: s.detalhado ? 'transparent' : '#2E353C', bgDetalhado: s.detalhado ? '#2E353C' : 'transparent',
+modoSimples: () => this.setState({ detalhado: false }), modoDetalhado: () => this.setState({ detalhado: true }),
+verDevKit: ver('DevKit'), verD1: ver('D1'), verSW1: ver('SW1'), verBZ1: ver('BZ1'),
+versaoLabel: 'v' + s.versao,
+versoesAberto: s.versoesAberto,
+toggleVersoes: () => this.setState({ versoesAberto: !s.versoesAberto }),
+versoes: versoesInfo.map((x) => ({ ...x, bg: x.n === s.versao ? '#2E353C' : 'transparent', pick: () => this.setState({ versao: x.n, sel: '', versoesAberto: false }) })),
+destacar: s.destacar,
+toggleDestacar: () => this.setState({ destacar: !s.destacar }),
+novo: s.destacar && s.versao === 3,
+versao: s.versao,
+isSeta: s.modo === 'seta', isMao: s.modo === 'mao',
+setaBg: s.modo === 'seta' ? '#2E353C' : 'transparent', maoBg: s.modo === 'mao' ? '#2E353C' : 'transparent',
+modoSeta: () => this.setState({ modo: 'seta' }), modoMao: () => this.setState({ modo: 'mao', hudShow: false }),
+cursor: s.modo === 'mao' ? (s.arrastando ? 'grabbing' : 'grab') : 'default',
+zoom: s.zoom, zoomLabel: Math.round(s.zoom * 100) + '%',
+zoomIn: () => this.setState({ zoom: Math.min(3, +(s.zoom * 1.25).toFixed(3)) }),
+zoomOut: () => this.setState({ zoom: Math.max(0.5, +(s.zoom / 1.25).toFixed(3)) }),
+centralizar: () => this.setState({ zoom: 1, panX: 0, panY: 0 }),
+panX: s.panX, panY: s.panY,
+down: (e) => { if (s.modo === 'mao') this.setState({ arrastando: true, ultX: e.clientX, ultY: e.clientY }); },
+up: () => this.setState({ arrastando: false }),
+leave: () => this.setState({ arrastando: false, hudShow: false }),
+moveArea: (e) => {
+const r = area(e);
+const mudar = { hudX: e.clientX - r.left + 18, hudY: e.clientY - r.top + 18 };
+if (s.modo === 'mao' && s.arrastando) {
+mudar.panX = s.panX + (e.clientX - s.ultX);
+mudar.panY = s.panY + (e.clientY - s.ultY);
+mudar.ultX = e.clientX;
+mudar.ultY = e.clientY;
+}
+this.setState(mudar);
+},
+moveBoard: (e) => {
+if (s.modo !== 'seta') return;
+const r = area(e);
+const bx = (e.clientX - r.left) / s.zoom;
+const by = (e.clientY - r.top) / s.zoom;
+this.setState({ hudShow: true, bx: bx, by: by, alvo: this.acertar(bx, by) });
+},
+sairBoard: () => this.setState({ hudShow: false }),
+clickBoard: () => { if (s.modo === 'seta') this.setState({ sel: s.alvo }); },
+hudShow: s.hudShow && s.modo === 'seta',
+hudX: s.hudX, hudY: s.hudY,
+hudNome: nomes[s.alvo] || 'Placa',
+mmX: (s.bx / 12).toFixed(1), mmY: ((480 - s.by) / 12).toFixed(1),
+temSel: s.sel !== '',
+info: infos[s.sel] || infos.pin,
+fechar: () => this.setState({ sel: '' }),
+focus: s.sel === 'pin' || s.sel === 'R1' ? 'net' : 'nada',
+pinSel: s.sel === 'pin',
+etapas: etapas,
+fimRodada: !s.rodando && s.falhou,
+mostrarErros: !s.rodando && s.falhou && s.versao === 3,
+placaTitulo: s.rodando ? 'Conferindo a placa…' : (s.falhou ? 'Onde está o problema' : 'Placa sem problemas'),
+simular: () => {
+if (this.timer) clearTimeout(this.timer);
+this.setState({ rodando: true, falhou: false, atual: 0 });
+this.timer = setTimeout(() => this.passo(), 700);
+}
+};
+}
+}
+</script>
+</body>
+</html>
