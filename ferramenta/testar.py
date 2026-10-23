@@ -133,6 +133,30 @@ def refs(*nomes):
     return saida
 
 
+def nets_partidas(modelo):
+    """nets cujo cobre ficou em mais de um pedaco (ex: dois GND que nao se encontram)"""
+    pai = {}
+
+    def raiz(a):
+        while pai.setdefault(a, a) != a:
+            a = pai[a]
+        return a
+
+    for t in modelo["trilhas"]:
+        pai[raiz(t["de"])] = raiz(t["ate"])
+    for peca in modelo["pecas"]:   # pinos da mesma peca com net fixa ja vem ligados por dentro (GND do DevKit)
+        fixos = {}
+        for n, (*_, net) in ((n, v) for n, v in BIBLIOTECA[peca["tipo"]]["pinos"].items() if len(v) == 4):
+            pai[raiz(f"{peca['ref']}.{n}")] = raiz(fixos.setdefault(net, f"{peca['ref']}.{n}"))
+    pedacos = {}   # net -> {raiz: [pinos]}
+    for peca in modelo["pecas"]:
+        for p in peca["pinos"]:
+            nome = f"{peca['ref']}.{p['n']}"
+            if p["net"]:
+                pedacos.setdefault(p["net"], {}).setdefault(raiz(nome), []).append(nome)
+    return {net: list(ps.values()) for net, ps in pedacos.items() if len(ps) > 1}
+
+
 # as 6 etapas; cada uma devolve o detalhe ou levanta Falhou
 def le_txt(ctx):
     ctx["texto"] = (ctx["pasta"] / "placa.txt").read_text()
@@ -169,6 +193,12 @@ def confere_ligacoes(ctx):
         raise Falhou(f"{' e '.join(sem)} sem ligação", sem, "sem ligação")
     if solto:
         raise Falhou(f"pino solto: {', '.join(solto)}", refs(*solto), "pino solto")
+    partidas = nets_partidas(modelo)
+    if partidas:
+        net, pedacos = next(iter(partidas.items()))
+        soltos = [p for pedaco in pedacos[1:] for p in pedaco]
+        raise Falhou(f"{net} ficou partida em {len(pedacos)} pedaços: {', '.join(soltos)} não chega no resto",
+                     refs(*soltos), "net partida")
     curtos = pares_perto(modelo, 0)
     if curtos:
         _, a, b = curtos[0]
