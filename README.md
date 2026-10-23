@@ -1,6 +1,6 @@
-# Chassi
+# pcbft
 
-Ferramenta pessoal que transforma a descrição de uma placa em texto nos arquivos que a fábrica aceita (Gerber + Excellon), sem KiCad. Vem com um app local para investigar a placa, ligar o circuito no papel e acompanhar o caminho até a fábrica. O nome: a placa é o chassi onde tudo se parafusa.
+Ferramenta pessoal que transforma a descrição de uma placa em texto nos arquivos que a fábrica aceita (Gerber + Excellon), sem KiCad. Vem com um app local para investigar a placa, ligar o circuito no papel e acompanhar o caminho até a fábrica.
 
 ```
 placa 52 34
@@ -20,7 +20,7 @@ liga D1.2 GND
 ```bash
 uv venv .venv && uv pip install -r requirements.txt
 .venv/bin/python ferramenta/testar.py placas/estudo
-python3 ferramenta/instalar.py   # põe o "Chassi" no menu de aplicativos
+python3 ferramenta/instalar.py   # põe o "pcbft" no menu de aplicativos
 ```
 
 O app (`ferramenta/app.py`) abre numa janela própria, sem abas, com a lista de projetos. Cada projeto conta a história em 4 passos (objetivo, placa, testes, fábrica) e dá pra rodar os testes de novo de lá. Sem instalar: `python3 ferramenta/app.py`.

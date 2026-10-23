@@ -1,6 +1,6 @@
-# Chassi
+# pcbft
 
-Ferramenta pessoal que transforma a descrição de uma placa em texto nos arquivos que a fábrica aceita (Gerber + Excellon), sem KiCad. O Claude Code constrói e edita; o Luiz investiga e aprende pelo Chassi (um app leve, janela própria no navegador). O nome: a placa é o chassi onde tudo se parafusa.
+Ferramenta pessoal que transforma a descrição de uma placa em texto nos arquivos que a fábrica aceita (Gerber + Excellon), sem KiCad. O Claude Code constrói e edita; o Luiz investiga e aprende pelo pcbft (um app leve, janela própria no navegador).
 
 Este arquivo é a especificação inteira. Leia tudo antes do primeiro passo.
 
