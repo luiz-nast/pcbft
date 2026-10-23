@@ -3,15 +3,23 @@
 uso: python ferramenta/gerar.py placas/estudo [-m "o que mudou"]
 """
 import json
+import math
 import sys
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
 from biblioteca import BIBLIOTECA
+from letras import tracos
 
 BORDA_FURO = 3.5   # furos de fixacao a 3,5 mm das bordas
 TRILHA = 0.3       # largura das trilhas, mm
 CONTORNO = 0.1     # largura da linha do contorno, mm
+# serigrafia, pelas regras da JLCPCB (https://jlcpcb.com/capabilities/pcb-capabilities, lido em 2026-10-23)
+SILK = 0.15        # linha (>= 0,15 mm)
+LETRA = 1.2        # altura da letra (>= 1,0 mm)
+LETRA_LINHA = 0.2  # traco da letra (proporcao 1:6 da altura)
+SILK_PAD = 0.15    # distancia minima entre serigrafia e pad
 COMANDOS = {"placa": 2, "furos": 2, "peca": 4, "liga": 2}   # comando -> quantos valores
 
 
@@ -184,8 +192,10 @@ def montar(lido):
         for x, y in ((b, b), (w - b, b), (b, h - b), (w - b, h - b)):
             furos.append({"x": r(x), "y": r(y), "d": f["d"], "linha": f["linha"]})
 
+    # fabrica.zip so sai quando toda medida veio de datasheet (nenhum numero inventado vai pra fabrica)
+    exemplo = [p["ref"] for p in pecas if p["exemplo"]]
     return {"placa": lido["placa"], "pecas": pecas, "trilhas": trilhas, "furos": furos,
-            "linhas": lido["linhas"]}
+            "fabrica": {"pronta": not exemplo, "falta_datasheet": exemplo}, "linhas": lido["linhas"]}
 
 
 # 4. Gerber (RS-274X): coordenadas em milionesimos de mm
@@ -221,8 +231,10 @@ class Gerber:
         self.desenho += [xy(*p) + "D01*" for p in pontos[1:]]
 
     def texto(self):
-        cab = ["%TF.GenerationSoftware,projeto-placa,gerar.py*%", f"%TF.FileFunction,{self.funcao}*%",
-               "%FSLAX46Y46*%", "%MOMM*%", "%LPD*%"]
+        cab = ["%TF.GenerationSoftware,projeto-placa,gerar.py*%", f"%TF.FileFunction,{self.funcao}*%"]
+        if self.funcao.startswith("Soldermask"):
+            cab.append("%TF.FilePolarity,Negative*%")   # na mascara, desenhar = abrir buraco
+        cab += ["%FSLAX46Y46*%", "%MOMM*%", "%LPD*%"]
         cab += [f"%ADD{d}{ab}*%" for ab, d in self.aberturas.items()]
         return "\n".join(cab + ["G01*"] + self.desenho + ["M02*"]) + "\n"
 
@@ -234,13 +246,79 @@ def contorno(modelo):
     return g.texto()
 
 
-def cobre_cima(modelo):
-    g = Gerber("Copper,L1,Top")
+def pads(modelo, lado):
+    """pinos com pad nesse lado: em cima todos; embaixo so os de furo passante"""
+    return [p for peca in modelo["pecas"] for p in peca["pinos"] if lado == "cima" or p["furo"]]
+
+
+def cobre(modelo, lado):
+    g = Gerber("Copper,L1,Top" if lado == "cima" else "Copper,L2,Bot")
+    for p in pads(modelo, lado):
+        g.carimba(p["pad"], p["x"], p["y"])
+    if lado == "cima":
+        for t in modelo["trilhas"]:
+            g.risca(t["largura"], [(t["x1"], t["y1"]), (t["x2"], t["y2"])])
+    return g.texto()
+
+
+def mascara(modelo, lado):
+    """buraco na mascara do tamanho do pad (JLCPCB abre 1:1)"""
+    g = Gerber("Soldermask,Top" if lado == "cima" else "Soldermask,Bot")
+    for p in pads(modelo, lado):
+        g.carimba(p["pad"], p["x"], p["y"])
+    return g.texto()
+
+
+def longe(x, y, obstaculos, folga):
+    for ox, oy, pad in obstaculos:
+        if pad["forma"] == "C":
+            d = math.hypot(x - ox, y - oy) - pad["d"] / 2
+        else:
+            d = math.hypot(max(abs(x - ox) - pad["w"] / 2, 0), max(abs(y - oy) - pad["h"] / 2, 0))
+        if d < folga:
+            return False
+    return True
+
+
+def recortar(a, b, obstaculos, folga, passo=0.05):
+    """pedacos da linha a-b que ficam longe dos pads e furos"""
+    n = max(1, math.ceil(math.dist(a, b) / passo))
+    pts = [(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n) for i in range(n + 1)]
+    pedacos, atual = [], []
+    for pt in pts:
+        if longe(*pt, obstaculos, folga):
+            atual.append(pt)
+        elif atual:
+            pedacos.append(atual)
+            atual = []
+    if atual:
+        pedacos.append(atual)
+    return [(c[0], c[-1]) for c in pedacos if len(c) > 1 or a == b]
+
+
+def serigrafia(modelo):
+    """contorno de cada peca e o nome dela em cima, sem encostar nos pads nem sair da placa"""
+    g = Gerber("Legend,Top")
+    w, h = modelo["placa"]["w"], modelo["placa"]["h"]
+    obstaculos = [(p["x"], p["y"], p["pad"]) for p in pads(modelo, "cima")]
+    obstaculos += [(f["x"], f["y"], {"forma": "C", "d": f["d"]}) for f in modelo["furos"]]
+
+    def linha(largura, pontos):
+        for a, b in zip(pontos, pontos[1:] or pontos):
+            for c, d in recortar(a, b, obstaculos, SILK_PAD + largura / 2):
+                if all(largura / 2 <= v[0] <= w - largura / 2 and largura / 2 <= v[1] <= h - largura / 2 for v in (c, d)):
+                    g.risca(largura, [c, d])
+
     for peca in modelo["pecas"]:
-        for pino in peca["pinos"]:
-            g.carimba(pino["pad"], pino["x"], pino["y"])
-    for t in modelo["trilhas"]:
-        g.risca(t["largura"], [(t["x1"], t["y1"]), (t["x2"], t["y2"])])
+        cw, ch, x, y = peca["corpo"]["w"], peca["corpo"]["h"], peca["x"], peca["y"]
+        if peca["corpo"]["redondo"]:
+            borda = [(x + cw / 2 * math.cos(i * math.pi / 24), y + ch / 2 * math.sin(i * math.pi / 24)) for i in range(49)]
+        else:
+            borda = [(x - cw / 2, y - ch / 2), (x + cw / 2, y - ch / 2), (x + cw / 2, y + ch / 2),
+                     (x - cw / 2, y + ch / 2), (x - cw / 2, y - ch / 2)]
+        linha(SILK, borda)
+        for pontos in tracos(peca["ref"], x, y + ch / 2 + 0.5, LETRA):
+            linha(LETRA_LINHA, pontos)
     return g.texto()
 
 
@@ -270,7 +348,11 @@ def escrever(modelo, saida):
     arquivos = {
         "modelo.json": json.dumps(modelo, ensure_ascii=False, indent=1),
         "placa-Edge_Cuts.gbr": contorno(modelo),
-        "placa-F_Cu.gbr": cobre_cima(modelo),
+        "placa-F_Cu.gbr": cobre(modelo, "cima"),
+        "placa-B_Cu.gbr": cobre(modelo, "baixo"),
+        "placa-F_Mask.gbr": mascara(modelo, "cima"),
+        "placa-B_Mask.gbr": mascara(modelo, "baixo"),
+        "placa-F_Silkscreen.gbr": serigrafia(modelo),
         "placa-PTH.drl": excellon(furos_com_cobre(modelo), cobre=True),
         "placa-NPTH.drl": excellon(modelo["furos"], cobre=False),
     }
@@ -279,6 +361,13 @@ def escrever(modelo, saida):
             (saida / nome).unlink(missing_ok=True)
         else:
             (saida / nome).write_text(texto)
+    zipado = saida / "fabrica.zip"
+    zipado.unlink(missing_ok=True)
+    if modelo["fabrica"]["pronta"]:
+        with zipfile.ZipFile(zipado, "w", zipfile.ZIP_DEFLATED) as z:
+            for nome, texto in arquivos.items():
+                if texto is not None and nome != "modelo.json":
+                    z.write(saida / nome, nome)
 
 
 # 6. versoes: cada placa.txt diferente vira vN.txt (+ vN.json pra bancada) e uma frase em versoes.json
