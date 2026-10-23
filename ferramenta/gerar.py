@@ -20,7 +20,7 @@ SILK = 0.15        # linha (>= 0,15 mm)
 LETRA = 1.2        # altura da letra (>= 1,0 mm)
 LETRA_LINHA = 0.2  # traco da letra (proporcao 1:6 da altura)
 SILK_PAD = 0.15    # distancia minima entre serigrafia e pad
-COMANDOS = {"placa": 2, "furos": 2, "peca": 4, "liga": 2}   # comando -> quantos valores
+COMANDOS = {"placa": (2, 2), "furos": (2, 2), "peca": (4, 5), "liga": (2, 2)}   # comando -> (mínimo, máximo) de valores
 
 
 class ErroTxt(Exception):
@@ -43,6 +43,16 @@ def numero(txt, n):
         raise ErroTxt(n, f"'{txt}' devia ser um número")
 
 
+def valor(txt, n):
+    """'100', '330', '4.7k', '10k', '1M' -> ohms"""
+    t = txt.replace("Ω", "").replace("R", "").rstrip("ohm")
+    mult = {"k": 1e3, "M": 1e6}.get(t[-1:], 1)
+    try:
+        return float(t[:-1] if mult != 1 else t) * mult
+    except ValueError:
+        raise ErroTxt(n, f"'{txt}' devia ser um valor como 100, 4.7k ou 10k")
+
+
 def ler(texto):
     lido = {"placa": None, "furos": [], "pecas": {}, "ligas": [], "linhas": texto.splitlines()}
     for n, linha in enumerate(lido["linhas"], 1):
@@ -52,8 +62,9 @@ def ler(texto):
         cmd, args = p[0], p[1:]
         if cmd not in COMANDOS:
             raise ErroTxt(n, f"comando desconhecido '{cmd}'")
-        if len(args) != COMANDOS[cmd]:
-            raise ErroTxt(n, f"'{cmd}' espera {COMANDOS[cmd]} valores, veio {len(args)}")
+        lo, hi = COMANDOS[cmd]
+        if not lo <= len(args) <= hi:
+            raise ErroTxt(n, f"'{cmd}' espera {lo if lo == hi else f'{lo} ou {hi}'} valores, veio {len(args)}")
         if cmd == "placa":
             lido["placa"] = {"w": numero(args[0], n), "h": numero(args[1], n), "linha": n}
         elif cmd == "furos":
@@ -64,8 +75,9 @@ def ler(texto):
             ref = args[0]
             if ref in lido["pecas"]:
                 raise ErroTxt(n, f"{ref} já existe na linha {lido['pecas'][ref]['linha']}", [ref])
-            lido["pecas"][ref] = {"ref": ref, "tipo": args[1], "x": numero(args[2], n),
-                                  "y": numero(args[3], n), "linha": n}
+            lido["pecas"][ref] = {"ref": ref, "tipo": args[1], "x": numero(args[2], n), "y": numero(args[3], n),
+                                  "valor": valor(args[4], n) if len(args) > 4 else None,
+                                  "valor_txt": args[4] if len(args) > 4 else None, "linha": n}
         elif cmd == "liga":
             lido["ligas"].append({"de": args[0], "ate": args[1], "linha": n})
     if lido["placa"] is None:
@@ -94,10 +106,11 @@ def montar(lido):
         tipo = BIBLIOTECA[p["tipo"]]
         peca = {**p, "nome": tipo["nome"], "explica": tipo["explica"], "exemplo": tipo["fonte"] is None,
                 "corpo": {"w": tipo["corpo"][0], "h": tipo["corpo"][1], "redondo": tipo.get("redondo", False)},
-                "juntos": tipo.get("juntos", []), "pinos": []}
+                "juntos": tipo.get("juntos", []), "eletrica": tipo.get("eletrica"), "compra": tipo.get("compra"),
+                "pinos": []}
         for n, (dx, dy, pad, *net) in tipo["pinos"].items():
-            pino = {"n": n, "x": r(p["x"] + dx), "y": r(p["y"] + dy), "pad": forma(pad),
-                    "furo": tipo["furo"], "net": net[0] if net else None}
+            pino = {"n": n, "nome": tipo.get("nomes", {}).get(n), "x": r(p["x"] + dx), "y": r(p["y"] + dy),
+                    "pad": forma(pad), "furo": tipo["furo"], "net": net[0] if net else None}
             peca["pinos"].append(pino)
             pinos[f"{p['ref']}.{n}"] = pino
         pecas.append(peca)
@@ -201,8 +214,17 @@ def montar(lido):
 
     # fabrica.zip so sai quando toda medida veio de datasheet (nenhum numero inventado vai pra fabrica)
     exemplo = [p["ref"] for p in pecas if p["exemplo"]]
+    # lista de compras: a fabrica entrega so a placa nua
+    compras = [{"ref": p["ref"], "nome": p["nome"], "compra": p["compra"], "valor": p["valor_txt"]} for p in pecas]
+    compras += [{"ref": "", "nome": extra, "compra": "", "valor": None}
+                for p in pecas for extra in BIBLIOTECA[p["tipo"]].get("extras", [])]
+    # da pra ligar no papel? so se toda peca tem modelo eletrico e todo resistor tem valor
+    falta = [p["ref"] for p in pecas if not p["eletrica"]]
+    sem_valor = [p["ref"] for p in pecas if p["eletrica"] and p["eletrica"]["modelo"] == "resistor" and p["valor"] is None]
     return {"placa": lido["placa"], "pecas": pecas, "trilhas": trilhas, "furos": furos,
-            "fabrica": {"pronta": not exemplo, "falta_datasheet": exemplo}, "linhas": lido["linhas"]}
+            "fabrica": {"pronta": not exemplo, "falta_datasheet": exemplo},
+            "simulacao": {"pode": not falta and not sem_valor, "falta_modelo": falta, "sem_valor": sem_valor},
+            "compras": compras, "linhas": lido["linhas"]}
 
 
 # 4. Gerber (RS-274X): coordenadas em milionesimos de mm
@@ -403,6 +425,8 @@ def o_que_mudou(antigo, novo):
             anota("trocou", ref)
         elif (pa[ref]["x"], pa[ref]["y"]) != (pb[ref]["x"], pb[ref]["y"]):
             anota("moveu", ref)
+        elif pa[ref]["valor"] != pb[ref]["valor"]:
+            anota("trocou", f"{ref} pra {pb[ref]['valor_txt']} Ω")
     for ref in pa:
         if ref not in pb:
             anota("tirou", ref)

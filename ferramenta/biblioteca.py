@@ -5,6 +5,9 @@
 # furo:  diametro do furo passante de cada pino; None = peca de superficie (SMD)
 # corpo: (largura, altura) do contorno da peca, pra desenhar; redondo: True se o corpo for redondo
 # juntos: pares de pinos ligados por dentro da peca (ex: os dois pinos de cada lado do botao)
+# nomes:  como a bancada chama cada pino pra gente ("+", "−", "A", "B", "lado 1"); sem isso mostra o numero
+# eletrica: o que o simulador precisa saber (circuito.py e o painel da bancada); sem isso a peca nao liga no papel
+# compra: o que comprar; extras: coisas que a peca pede e nao vem com ela (a pilha do suporte)
 # fonte: datasheet de onde vieram os numeros
 #        None = valores de EXEMPLO, nao mandar pra fabrica (trocar no marco 7)
 
@@ -16,6 +19,7 @@ def fileira(primeiro, quantos, x0, passo, y, pad):
 BIBLIOTECA = {
     "resistor": {
         "nome": "Resistor",
+        "nomes": {"1": "lado 1", "2": "lado 2"},
         "explica": "Fica no caminho da corrente e limita quanto passa. Sem ele, um LED ligado direto no pino queima.",
         "fonte": None,
         "furo": None,
@@ -24,6 +28,7 @@ BIBLIOTECA = {
     },
     "led": {
         "nome": "LED",
+        "nomes": {"1": "+", "2": "−"},
         "explica": "Acende quando a corrente passa por ele. Tem lado certo: o pino 1 é o + (ânodo), o 2 é o − (cátodo).",
         "fonte": None,
         "furo": None,
@@ -32,6 +37,7 @@ BIBLIOTECA = {
     },
     "botao": {
         "nome": "Botão",
+        "nomes": {"1": "A", "2": "A", "3": "B", "4": "B"},
         "explica": "Quando você aperta, ele junta os dois lados do circuito. Os pinos 1 e 2 são o mesmo lado; 3 e 4, o outro.",
         "fonte": None,
         "furo": 1.0,
@@ -42,6 +48,7 @@ BIBLIOTECA = {
     },
     "buzzer": {
         "nome": "Buzzer",
+        "nomes": {"1": "+", "2": "−"},
         "explica": "Faz som quando recebe sinal. O pino 1 é o +.",
         "fonte": None,
         "furo": 0.9,
@@ -76,6 +83,9 @@ BIBLIOTECA.update({
         "furo": 0.8,
         "corpo": (6.3, 2.5),
         "pinos": {"1": (-5.08, 0, 1.6), "2": (5.08, 0, 1.6)},
+        "nomes": {"1": "lado 1", "2": "lado 2"},
+        "eletrica": {"modelo": "resistor", "potencia_max": 0.25},   # Yageo CFR-25: 1/4 W a 70 °C
+        "compra": "Yageo CFR-25 (ou qualquer resistor de 1/4 W com o valor certo)",
     },
     "led_5mm": {
         "nome": "LED vermelho 5 mm",
@@ -87,6 +97,10 @@ BIBLIOTECA.update({
         "corpo": (5.8, 5.8),
         "redondo": True,
         "pinos": {"1": (1.27, 0, 1.8), "2": (-1.27, 0, (1.8, 1.8))},
+        "nomes": {"1": "+", "2": "−"},
+        # Kingbright WP7113ID: VF 1,9 V típica (2,3 máx) medida a 10 mA; IF máxima contínua 30 mA
+        "eletrica": {"modelo": "led", "vf": 1.9, "vf_max": 2.3, "i_teste": 0.010, "i_max": 0.030},
+        "compra": "Kingbright WP7113ID (ou qualquer LED vermelho de 5 mm)",
     },
     "botao_6x6": {
         "nome": "Botão 6×6 mm",
@@ -99,6 +113,9 @@ BIBLIOTECA.update({
         "pinos": {"1": (-3.25, 2.25, 2.0), "2": (3.25, 2.25, 2.0),
                   "3": (-3.25, -2.25, 2.0), "4": (3.25, -2.25, 2.0)},
         "juntos": [("1", "2"), ("3", "4")],
+        "nomes": {"1": "A", "2": "A", "3": "B", "4": "B"},
+        "eletrica": {"modelo": "chave", "lados": [["1", "2"], ["3", "4"]], "i_max": 0.050},   # Omron B3F: 1 a 50 mA
+        "compra": "Omron B3F-1000 (ou botão tátil 6×6 mm de 4 pinos)",
     },
     "pilha_cr2032": {
         "nome": "Suporte de pilha CR2032",
@@ -109,6 +126,12 @@ BIBLIOTECA.update({
         "furo": 1.5,
         "corpo": (28.7, 22.8),
         "pinos": {"1": (-12.25, 0, (3.0, 3.0), "VBAT"), "2": (8.24, 0, 3.0, "GND")},
+        "nomes": {"1": "+", "2": "−"},
+        # Energizer CR2032 (https://data.energizer.com/pdfs/cr2032.pdf): 3,0 V nominal, 235 mAh até 2,0 V.
+        # v_max 3,3 = pilha nova, so o limite do painel: o datasheet da a nominal e o corte, nao o valor nova
+        "eletrica": {"modelo": "pilha", "mais": "1", "menos": "2", "v": 3.0, "v_min": 2.0, "v_max": 3.3, "mah": 235},
+        "compra": "Keystone 103",
+        "extras": ["Pilha CR2032 de 3 V"],
     },
 })
 
