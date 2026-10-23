@@ -43,19 +43,23 @@ ferramenta/
   gerar.py            ← lê placa.txt, escreve modelo.json, Gerbers, Excellon
   biblioteca.py       ← pinos de cada tipo de peça (de datasheet)
   testar.py           ← bateria de testes → testes.json
+  app.py              ← abre a bancada como app (servidor local + janela)
+  instalar.py         ← atalho "Bancada de placas" no menu de aplicativos
 bancada/
   index.html          ← o app (HTML + JS puro, SVG)
+  icone.svg
 placas/estudo/
   requisitos.md
   placa.txt
   saida/              ← gerado: modelo.json, placa-*.gbr, placa-PTH/NPTH.drl, foto.png, fabrica.zip
   testes.json         ← gerado
   versoes/            ← v1.txt, v2.txt, ... + v1.json, v2.json (modelo de cada versão) + versoes.json
+  fabrica.json        ← o que aconteceu no site da fábrica (o Claude escreve depois de subir o zip)
 ```
 
 Instalar uma vez: `uv venv .venv && uv pip install -r requirements.txt` (só o `gerbonara`, pra etapa 5; a foto usa o Chrome headless).
 Gerar e testar: `.venv/bin/python ferramenta/testar.py placas/estudo` (o `testar.py` chama o `gerar.py`; o `gerar.py` sozinho também funciona).
-Rodar a bancada: `python -m http.server` na raiz e abrir `localhost:8000/bancada/?placa=estudo`. A página relê os arquivos a cada 1 s (polling simples).
+Rodar a bancada: `python3 ferramenta/app.py` (ou o atalho do menu, depois do `instalar.py`). Abre uma janela com os projetos; o app fecha sozinho uns minutos depois que a janela fecha. Também funciona com `python -m http.server` na raiz e `localhost:8000/bancada/`, só sem o botão de rodar os testes. A página relê os arquivos a cada 1 s (polling simples).
 As pastas em `placas/` ficam só na máquina (`.gitignore`); o repositório público leva só a ferramenta.
 
 ---
@@ -182,7 +186,11 @@ Também calcula o status de cada requisito a partir das linhas `verifica:`.
 
 HTML + JS puro, desenho em SVG (facilita clique, destaque e zoom via viewBox). Tema escuro, fonte IBM Plex Sans/Mono. Referência visual: `design/App.dc.html` e `design/Board.dc.html` (abrir no navegador não roda; é pra ler o layout e as cores).
 
-**Topo:** nome do projeto · abas **Thinking | Projeto | Testes** · status dos testes (✓/✗) · relógio de versões (abre lista; escolher v1/v2 mostra a placa daquela versão; opção "destacar o que mudou").
+**Início:** a lista de projetos (`placas/*`), cada um com a miniatura da placa, o status dos testes, a versão e se já foi pra fábrica. Clicar abre o projeto.
+
+**Processo:** a história do projeto em 4 passos, pra mostrar pra alguém: objetivo e requisitos, a placa e as versões, os testes (com o resumo do Claude e o botão de rodar de novo) e a fábrica (`fabrica.zip` e, se tiver `fabrica.json`, a cotação com a imagem do site).
+
+**Topo:** ← projetos · nome do projeto · abas **Processo | Thinking | Projeto | Testes** · status dos testes (✓/✗) · relógio de versões (abre lista; escolher v1/v2 mostra a placa daquela versão; opção "destacar o que mudou").
 
 **Thinking:** o objetivo num card em cima, os requisitos em cards ligados embaixo, cada um com status (ok / falta ligar) e peças. Modo **Simples** e **Detalhado** (mostra os sub-requisitos). "Ver na placa →" abre a peça na aba Projeto. Começar como árvore simples; canvas roteado só depois.
 

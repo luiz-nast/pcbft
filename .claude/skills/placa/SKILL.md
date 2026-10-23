@@ -23,7 +23,17 @@ O Claude decide só a **intenção** (quais peças, onde, o que liga em quê). C
    ```
 6. Atualize o `AGORA.md` no fim da sessão.
 
-**Nunca diga que terminou sem ter rodado o `testar.py`.** A bancada (`python -m http.server` na raiz, `localhost:8000/bancada/?placa=<nome>`) se atualiza sozinha; não descreva o progresso no chat, o resumo final basta.
+**Nunca diga que terminou sem ter rodado o `testar.py`.** A bancada (`python3 ferramenta/app.py`, ou o atalho "Bancada de placas") se atualiza sozinha; não descreva o progresso no chat, o resumo final basta.
+
+## Fábrica
+
+Só quando o Luiz pedir: suba o `saida/fabrica.zip` na página de cotação da JLCPCB (`https://cart.jlcpcb.com/quote`, "Add gerber file") e pare na cotação. **Nunca** salve no carrinho, faça pedido ou pague sem ele confirmar o item e o total. Depois, registre o que aconteceu em `placas/<nome>/fabrica.json` (a aba Processo mostra):
+
+```json
+{"site": "JLCPCB", "url": "https://cart.jlcpcb.com/quote", "quando": "AAAA-MM-DD HH:MM", "versao": 1,
+ "situacao": "cotação, sem pedido", "detectou": "placa de 2 camadas, 34 × 52 mm",
+ "preco": "US$ 4,00 por 5 placas, fabricação em 2 dias (sem o frete)", "imagem": "fabrica-jlcpcb.jpg"}
+```
 
 ## placa.txt
 
