@@ -104,6 +104,9 @@ def pad(p):
 def tipo_da_loja(bloco, d, des):
     """d = ficha da loja (loja.item), des = desenho do EasyEDA (loja.desenho)"""
     b, at, codigo = BLOCOS[bloco], d["atributos"], d["codigo"]
+    medida = tamanho(d["pacote"])
+    if medida == d["pacote"] and des["corpo"]:   # o pacote nao diz a medida: usa o contorno do desenho
+        medida = f"{des['corpo'][0]:.1f} × {des['corpo'][1]:.1f} mm".replace(".", ",")
     tipo = {
         "nome": b["nome"], "bloco": bloco, "explica": b["explica"],
         "fonte": f"desenho {des['pacote']} do EasyEDA; ficha LCSC {codigo}; datasheet {d['datasheet']}",
@@ -114,7 +117,7 @@ def tipo_da_loja(bloco, d, des):
         "eletrica": None, "pendente": [],
         "compra": f"{d['marca']} {d['modelo']} (LCSC {codigo})",
         "loja": {k: d[k] for k in ("codigo", "modelo", "marca", "pacote", "preco", "minimo", "estoque", "datasheet", "link", "atributos")}
-                | {"tamanho": tamanho(d["pacote"]), "quando": datetime.now().strftime("%Y-%m-%d")},
+                | {"tamanho": medida, "quando": datetime.now().strftime("%Y-%m-%d")},
     }
     if bloco == "resistor":
         ohms, w = numero_com_unidade(at.get("Resistance"), "Ω"), numero_com_unidade(at.get("Power(Watts)"), "W")
@@ -329,21 +332,20 @@ def opcoes(pasta, ref, quantos=8):
         if i["codigo"] not in vistos:
             vistos.add(i["codigo"])
             saida.append({**i, "tamanho": tamanho(i["pacote"]), "escolhida": i["codigo"] == b.get("peca"),
-                          "conferida": i["codigo"] in CONFERIDOS})
+                          "conferida": i["codigo"] in CONFERIDOS or b["bloco"] == "resistor"})   # resistor: a loja ja diz tudo
     return {"ref": ref, "bloco": b["bloco"], "busca": busca, "alvo": alvo, "itens": saida[:quantos]}
 
 
-def trocar_no_txt(pasta, ref, codigo):
-    """peca REF TIPO X Y [VALOR] -> peca REF CODIGO X Y (o valor agora vem da peca). False se REF nao esta na placa"""
+def trocar_no_txt(pasta, ref, codigo, nome):
+    """peca REF TIPO X Y [VALOR] -> peca REF CODIGO X Y   # nome (o valor vem da peca; o comentario velho sai). False se REF nao esta na placa"""
     arq = Path(pasta) / "placa.txt"
     linhas, achou = arq.read_text().splitlines(keepends=True), False
     for i, linha in enumerate(linhas):
         codigo_txt, _, comentario = linha.partition("#")
         p = codigo_txt.split()
-        if len(p) >= 5 and p[0] == "peca" and p[1] == ref:
+        if len(p) >= 5 and p[0] == "peca" and p[1] == ref and p[2] != codigo:
             fim = "\n" if linha.endswith("\n") else ""
-            nova = f"peca {ref} {codigo} {p[3]} {p[4]}"
-            linhas[i] = nova + (f"   #{comentario.rstrip()}" if comentario.strip() else "") + fim
+            linhas[i] = f"peca {ref} {codigo} {p[3]} {p[4]}   # {nome}, escolhido no carrinho{fim}"
             achou = True
     if achou:
         arq.write_text("".join(linhas))
@@ -359,7 +361,9 @@ def escolher(pasta, ref, codigo, quem="Luiz"):
     tipo = loja.importar(codigo, b["bloco"], pasta)
     b.update(peca=codigo, quem=quem, quando=datetime.now().strftime("%Y-%m-%d %H:%M"))
     salvar_projeto(pasta, proj)
-    return {"tipo": tipo["nome"], "na_placa": trocar_no_txt(pasta, ref, codigo), "pendente": tipo["pendente"]}
+    trocar_no_txt(pasta, ref, codigo, tipo["nome"])
+    return {"tipo": tipo["nome"], "na_placa": tipos_no_txt(pasta).get(ref) == codigo, "pendente": tipo["pendente"],
+            "frase": f"trocou {ref} por {tipo['nome']} ({codigo}), no carrinho"}
 
 
 def responder(pasta, pergunta, resposta, quem="Luiz"):

@@ -48,11 +48,11 @@ def placa(nome):
     return None
 
 
-def rodar_testes(pasta):
-    """dispara o testar.py dessa placa (um por vez); chamar com a trava"""
+def rodar_testes(pasta, frase=None):
+    """dispara o testar.py dessa placa (um por vez); chamar com a trava. frase = o que mudou, pra versao"""
     if pasta.name in rodando and rodando[pasta.name].poll() is None:
         return False
-    rodando[pasta.name] = subprocess.Popen([python(), str(RAIZ / "ferramenta" / "testar.py"), str(pasta)], cwd=RAIZ,
+    rodando[pasta.name] = subprocess.Popen([python(), str(RAIZ / "ferramenta" / "testar.py"), str(pasta), *(["-m", frase] if frase else [])], cwd=RAIZ,
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return True
 
@@ -177,7 +177,7 @@ class Bancada(SimpleHTTPRequestHandler):
                 return self.responder({"erro": str(e)}, 400)
             except loja.SemLoja as e:
                 return self.responder({"erro": str(e)}, 502)
-            rodar_testes(pasta)
+            rodar_testes(pasta, (feito or {}).get("frase"))
         self.responder({"ok": True, **(feito or {})})
 
 

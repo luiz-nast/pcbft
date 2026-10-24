@@ -144,6 +144,41 @@ svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; backgr
 .cotacao img { width: 100%; border-radius: 8px; border: 1px solid var(--borda); display: block; }
 .link { min-height: 32px; padding: 0; color: var(--cobre); font-size: 13px; text-decoration: none; align-self: flex-start; display: inline-flex; align-items: center; }
 @media (max-width: 640px) { .placa-resumo { grid-template-columns: 1fr; } }
+.pergunta { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.pergunta-txt { font-size: 15px; font-weight: 600; }
+.escolhas { display: flex; flex-wrap: wrap; gap: 2px; align-self: flex-start; background: var(--area); border: 1px solid var(--borda); border-radius: 999px; padding: 3px; }
+.escolhas button { min-height: 36px; padding: 0 18px; border-radius: 999px; font-size: 14px; color: #C8CDD2; }
+.escolhas button[aria-pressed="true"] { background: var(--cobre); color: #2A1A05; font-weight: 600; }
+.escolhas button:disabled { opacity: 0.5; cursor: wait; }
+.cadeia { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.bloco { flex: 1 1 130px; display: flex; flex-direction: column; gap: 4px; padding: 12px; background: var(--area); border: 1px solid var(--borda); border-radius: 10px; }
+.bloco .icone { height: 26px; color: var(--cobre); }
+.bloco .icone svg { height: 26px; width: auto; display: block; }
+.bloco .funcao { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--sec); }
+.bloco b { font-size: 15px; }
+.bloco .por-que { font-size: 12.5px; color: #C8CDD2; line-height: 1.45; }
+.cadeia .seta { align-self: center; color: var(--sec); font-size: 18px; }
+.carrinho { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.item { display: grid; grid-template-columns: 72px 1fr; gap: 6px 14px; padding: 12px; background: var(--area); border: 1px solid var(--borda); border-radius: 10px; }
+.item .foto, .opcao img { width: 72px; height: 72px; object-fit: contain; background: #F4F4F2; border-radius: 8px; display: block; }
+.item .sem-foto { width: 72px; height: 72px; border-radius: 8px; background: #22272C; }
+.item .info { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.item .info b { font-size: 15px; }
+.item .opcoes { grid-column: 1 / -1; }
+.aviso { font-size: 13px; color: var(--cobre); line-height: 1.45; }
+.conta { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: #1A2230; border: 1px solid #2C3A52; font-size: 13px; line-height: 1.5; }
+.conta .mono { font-size: 12px; color: #C8CDD2; }
+.conta .bate { color: var(--ok); font-weight: 600; } .conta .nao-bate { color: var(--cobre); font-weight: 600; }
+.opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; padding-top: 8px; border-top: 1px solid var(--borda); margin-top: 6px; }
+.opcoes > .sub, .opcoes > .vazio-op { grid-column: 1 / -1; }
+.opcao { display: flex; flex-direction: column; gap: 3px; padding: 10px; border: 1px solid var(--borda); border-radius: 10px; background: var(--painel); font-size: 12.5px; }
+.opcao.escolhida { border-color: #24583A; }
+.opcao b { font-size: 12.5px; word-break: break-all; }
+.opcao button { margin-top: 4px; min-height: 32px; border-radius: 8px; background: var(--ativo); font-size: 13px; }
+.opcao button:hover { background: #39424A; }
+.total { font-size: 14px; } .total b { font-family: var(--mono); }
+.inspetor .foto-peca { width: 100%; max-height: 180px; object-fit: contain; background: #F4F4F2; border-radius: 10px; }
+.inspetor .titulo.nome-peca { font-family: inherit; font-size: 19px; font-weight: 600; word-break: normal; }
 
 /* thinking */
 .thinking { flex: 1; overflow: auto; background: var(--area); padding: 32px 24px 48px; display: flex; flex-direction: column; align-items: center; gap: 28px; }
@@ -204,6 +239,8 @@ svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; backgr
 .furo { fill: var(--area); stroke: #C8CDD2; stroke-width: 0.15; }
 .corpo { fill: rgba(0,0,0,0.001); stroke: #F4F4F2; stroke-width: 0.15; }
 .corpo.modulo { stroke-dasharray: 0.8 0.5; }
+.corpo.da-loja { stroke: none; }
+.silk { fill: none; stroke: #F4F4F2; stroke-width: 0.15; stroke-linejoin: round; pointer-events: none; }
 .trilha { stroke: var(--cobre); stroke-linecap: round; fill: none; }
 .pad { fill: var(--cobre); }
 .broca { fill: var(--area); pointer-events: none; }
@@ -252,6 +289,10 @@ const S = {
   ajustes: { pilha: {}, resistor: {}, chave: {} },   // o que o painel mudou
   api: false,            // true quando a pagina vem do app.py (da pra rodar os testes daqui)
   cotacao: null,         // fabrica.json: o que aconteceu no site da fabrica
+  projeto: null,         // /api/projeto: objetivo, perguntas, blocos e carrinho (passos 1 a 3)
+  opcoes: {},            // ref -> {carregando, erro, itens, busca}: o "Trocar" do carrinho
+  mexendo: false,        // um pedido de escolher/responder em andamento
+  recado: '',            // o que acabou de acontecer (ou deu errado) no carrinho
   modelo: null, testes: null, versoes: [],
   brutos: {},            // ultimo texto lido de cada arquivo, pra saber se mudou
   modelosVersao: {},     // v -> modelo daquela versao (versoes/vN.json)
@@ -283,11 +324,23 @@ async function lerJson(caminho, chave) {
   } catch { return false; }   // arquivo pela metade: tenta no proximo ciclo
 }
 
+async function lerProjeto() {
+  if (!S.api) return false;
+  try {
+    const r = await fetch(`/api/projeto?placa=${encodeURIComponent(PLACA)}`, { cache: 'no-store' });
+    const txt = r.ok ? await r.text() : 'null';
+    if (txt === S.brutos.projeto) return false;
+    S.brutos.projeto = txt;
+    return JSON.parse(txt);
+  } catch { return false; }
+}
+
 async function atualizar() {
-  const [modelo, testes, versoes, cotacao] = await Promise.all([
+  const [modelo, testes, versoes, cotacao, projeto] = await Promise.all([
     lerJson('saida/modelo.json', 'modelo'), lerJson('testes.json', 'testes'), lerJson('versoes/versoes.json', 'versoes'),
-    lerJson('fabrica.json', 'cotacao'),
+    lerJson('fabrica.json', 'cotacao'), lerProjeto(),
   ]);
+  if (projeto !== false) S.projeto = projeto;
   if (modelo) S.modelo = modelo;
   if (testes) {
     // os requisitos so sao gravados no fim da rodada; enquanto roda, fica o objetivo da rodada anterior
@@ -296,7 +349,7 @@ async function atualizar() {
   }
   if (versoes) S.versoes = versoes;
   if (cotacao) S.cotacao = cotacao;
-  if (modelo || testes || versoes || cotacao) desenhar();
+  if (modelo || testes || versoes || cotacao || projeto !== false) desenhar();
 }
 
 async function modeloDaVersao(v) {
@@ -350,6 +403,18 @@ const joelho = e => e.vf - e.r_s * e.i_teste;   // onde o LED comeca a conduzir
 const polos = e => [e.mais ?? '1', e.menos ?? '2'];   // + e − do LED (peca da loja diz; senao 1 e 2)
 const rPilha = e => e.r_interna || R_PILHA;
 
+// parte do brilho do anuncio que essa corrente da, pela curva do datasheet (mesma conta de blocos.py)
+function brilhoDaCorrente(e, i) {
+  const pts = e?.brilho;
+  if (!pts?.length) return null;
+  if (i <= pts[0][0]) return 0;
+  for (let k = 1; k < pts.length; k++) {
+    const [i0, b0] = pts[k - 1], [i1, b1] = pts[k];
+    if (i <= i1) return b0 + (b1 - b0) * (i - i0) / (i1 - i0);
+  }
+  return pts.at(-1)[1];
+}
+
 function resolverLinear(A, b) {
   const n = b.length, M = A.map((l, i) => [...l, b[i]]);
   for (let c = 0; c < n; c++) {
@@ -370,7 +435,8 @@ function resolverLinear(A, b) {
 function motivoSemSimulacao(m) {
   const s = m.simulacao;
   if (!s) return 'placa antiga, gere de novo';
-  const partes = [...(s.falta_modelo || []).map(r => `${r} sem modelo elétrico`), ...(s.sem_valor || []).map(r => `${r} sem valor em ohms`),
+  const pend = new Set(m.pecas.filter(p => p.pendente?.length).map(p => p.ref));
+  const partes = [...(s.falta_modelo || []).map(r => pend.has(r) ? `falta conferir o datasheet de ${r}` : `${r} sem modelo elétrico`), ...(s.sem_valor || []).map(r => `${r} sem valor em ohms`),
     ...(s.soltos || []).map(r => `${r} ainda não está ligado`)];
   if (partes.length) return partes.join(', ');
   if (!m.pecas.some(p => p.eletrica?.modelo === 'pilha')) return 'sem pilha na placa, nada pra ligar';
@@ -517,7 +583,11 @@ function placaSVG(m, o = {}) {
     const c = p.corpo, x = p.x - c.w / 2, y = Y(p.y) - c.h / 2;
     const raio = c.redondo ? Math.min(c.w, c.h) / 2 : 0.4;
     const apertado = o.sim && p.eletrica?.modelo === 'chave' && o.ajustes?.chave[p.ref] ? ' apertado' : '';
-    s += `<rect class="corpo${p.pinos.length > 8 ? ' modulo' : ''}${apaga(null, p.ref)}${apertado}" x="${x}" y="${y}" width="${c.w}" height="${c.h}" rx="${raio}"${alvo('peca:' + p.ref)}/>`;
+    const loja = p.desenho?.length ? ' da-loja' : '';   // peca da loja: o retangulo so pega o clique; o desenho e o oficial
+    s += `<rect class="corpo${p.pinos.length > 8 ? ' modulo' : ''}${loja}${apaga(null, p.ref)}${apertado}" x="${x}" y="${y}" width="${c.w}" height="${c.h}" rx="${raio}"${alvo('peca:' + p.ref)}/>`;
+    for (const traco of p.desenho || []) {
+      s += `<polyline class="silk${apaga(null, p.ref)}" points="${traco.map(([dx, dy]) => `${(p.x + dx).toFixed(3)},${Y(p.y + dy).toFixed(3)}`).join(' ')}"/>`;
+    }
   }
   m.trilhas.forEach((t, i) => {
     s += `<line class="trilha${apaga(t.net, null)}" x1="${t.x1}" y1="${Y(t.y1)}" x2="${t.x2}" y2="${Y(t.y2)}" stroke-width="${t.largura}"${alvo('trilha:' + i)}/>`;
@@ -701,14 +771,18 @@ function desenharProjeto(main) {
   if (ref) info.req = requisitosDa(ref);
   painel.innerHTML = `
     <div class="cab">
-      <div><div class="tipo">${esc(info.tipo)}</div><div class="titulo">${esc(info.titulo)}</div></div>
+      <div><div class="tipo">${esc(info.tipo)}</div><div class="titulo${info.nomePeca ? ' nome-peca' : ''}">${esc(info.titulo)}</div></div>
       <button type="button" class="fechar" data-fechar aria-label="Fechar inspetor"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     ${info.agora ? `<div class="agora${info.agora.includes('QUEIMA') ? ' queima' : ''}">${esc(info.agora)}</div>` : ''}
+    ${info.loja?.foto ? `<img class="foto-peca" src="${BASE}pecas/${encodeURIComponent(info.loja.foto)}" alt="Foto da peça">` : ''}
     <div class="explica"><b>O que é isso?</b><p>${esc(info.explica)}</p></div>
     <dl>${info.linhas.map(([k, v, alerta]) => `<dt>${esc(k)}</dt><dd${alerta ? ' class="alerta"' : ''}>${esc(v)}</dd>`).join('')}</dl>
     ${info.linha ? `<div class="origem"><span>Vem de placa.txt, linha ${info.linha}</span><code>${esc(m.linhas[info.linha - 1])}</code></div>` : ''}
-    ${info.req ? `<span class="tipo">Requisito: ${esc(info.req)}</span>` : ''}`;
+    ${info.req ? `<span class="tipo">Requisito: ${esc(info.req)}</span>` : ''}
+    ${info.loja ? `<div class="origem"><span>Peça de verdade: ${esc(info.compra || '')}</span><div class="links">
+      ${/^https:\/\//.test(info.loja.link || '') ? `<a href="${esc(info.loja.link)}" target="_blank" rel="noopener">Na loja ↗</a>` : ''}
+      ${/^https:\/\//.test(info.loja.datasheet || '') ? `<a href="${esc(info.loja.datasheet)}" target="_blank" rel="noopener">Datasheet ↗</a>` : ''}</div></div>` : ''}`;
 }
 
 // ---------- painel: mexer na pilha, no resistor e no botao e ver o que acontece ----------
@@ -720,21 +794,21 @@ function painelHTML(m) {
   return `
     <div class="cab"><div><div class="tipo">Circuito ligado</div><div class="titulo">Painel</div></div>${desliga}</div>
     <p class="dica">As bolinhas nas trilhas são a corrente andando. Mexa aqui e veja o que muda.${chaves.length ? ' Clique no botão da placa pra apertar e soltar.' : ''}</p>
-    ${pilhas.map(p => `<label class="controle"><span>${esc(p.ref)} · pilha <b data-txt-pilha="${esc(p.ref)}"></b></span>
+    ${pilhas.map(p => `<label class="controle"><span>Pilha · ${esc(p.ref)} <b data-txt-pilha="${esc(p.ref)}"></b></span>
       <input type="range" data-pilha="${esc(p.ref)}" min="${p.eletrica.v_min}" max="${p.eletrica.v_max}" step="0.1" value="${p.eletrica.v}">
       <span class="faixa"><i>fraca ${volts(p.eletrica.v_min)} V</i><i>nova ${volts(p.eletrica.v_max)} V</i></span></label>`).join('')}
     ${chaves.length ? `<div class="chaves">${chaves.map(p => `<button type="button" class="pilula" data-chave="${esc(p.ref)}"></button>`).join('')}</div>` : ''}
     ${resistores.map(p => {
       const lista = OHMS.includes(p.valor) ? OHMS : [...OHMS, p.valor].sort((a, b) => a - b);
-      return `<label class="controle"><span>${esc(p.ref)} · resistor <b data-txt-resistor="${esc(p.ref)}"></b></span>
+      return `<label class="controle"><span>Resistor · ${esc(p.ref)} <b data-txt-resistor="${esc(p.ref)}"></b></span>
       <input type="range" data-resistor="${esc(p.ref)}" data-lista="${lista.join(',')}" min="0" max="${lista.length - 1}" step="1" value="${lista.indexOf(p.valor)}">
       <span class="faixa"><i>${ohmsTxt(lista[0])}</i><i>${ohmsTxt(lista[lista.length - 1])}</i></span></label>`;
     }).join('')}
-    ${leds.map(p => `<div class="leitura"><span>${esc(p.ref)} · LED <b data-led="${esc(p.ref)}"></b></span>
+    ${leds.map(p => `<div class="leitura"><span>LED · ${esc(p.ref)} <b data-led="${esc(p.ref)}"></b></span>
       <div class="barra"><i class="faixa-b" data-faixa="${esc(p.ref)}"></i><i class="teste" data-teste="${esc(p.ref)}"></i><i class="limite" data-limite="${esc(p.ref)}"></i><i class="marca" data-marca="${esc(p.ref)}"></i></div>
       <span class="legenda" data-legenda="${esc(p.ref)}"></span></div>`).join('')}
-    ${resistores.map(p => `<div class="leitura"><span>${esc(p.ref)} · esquenta <b data-pot="${esc(p.ref)}"></b></span></div>`).join('')}
-    ${pilhas.map(p => `<div class="leitura"><span>${esc(p.ref)} · gasta <b data-gasto="${esc(p.ref)}"></b></span></div>`).join('')}
+    ${resistores.map(p => `<div class="leitura"><span>Resistor · ${esc(p.ref)} esquenta <b data-pot="${esc(p.ref)}"></b></span></div>`).join('')}
+    ${pilhas.map(p => `<div class="leitura"><span>Pilha · ${esc(p.ref)} gasta <b data-gasto="${esc(p.ref)}"></b></span></div>`).join('')}
     <p class="formula" data-formula></p>
     <button type="button" class="link" data-reset>Voltar aos valores da placa</button>`;
 }
@@ -752,12 +826,12 @@ function preencherPainel(m, sim) {
     if (+r.value !== v) r.value = v;
     const i = sim?.pecas[p.ref]?.i ?? 0;
     const horas = i > 1e-6 ? p.eletrica.mah / (i * 1000) : null;
-    q(`[data-gasto="${p.ref}"]`).textContent = `${mA(i)} mA${horas && horas < 1e5 ? ` · dura ≈ ${horas < 100 ? horas.toFixed(0) : Math.round(horas / 24) + ' dias ou ' + horas.toFixed(0)} h assim` : ''}`;
+    q(`[data-gasto="${p.ref}"]`).textContent = `${mA(i)} mA${horas && horas < 1e5 ? ` · dura no máximo ≈ ${horas < 100 ? horas.toFixed(0) : Math.round(horas / 24) + ' dias ou ' + horas.toFixed(0)} h assim` : ''}`;
   }
   for (const p of porModelo(m, 'chave')) {
     const b = q(`[data-chave="${p.ref}"]`), ap = !!aj.chave[p.ref];
     b.setAttribute('aria-pressed', ap);
-    b.textContent = `${p.ref} · ${ap ? 'apertado' : 'solto'}`;
+    b.textContent = `Botão ${p.ref} · ${ap ? 'apertado' : 'solto'}`;
   }
   for (const p of porModelo(m, 'resistor')) {
     const ohms = aj.resistor[p.ref] ?? p.valor;
@@ -774,8 +848,8 @@ function preencherPainel(m, sim) {
     const pct = i => `${Math.min(100, Math.max(0, i / topo * 100)).toFixed(1)}%`;
     const b = q(`[data-led="${p.ref}"]`);
     if (!r) { b.textContent = '?'; continue; }
-    const est = estadoLed(r);
-    b.textContent = `${mA(r.i)} mA · ${TEXTO_LED[est]}`;
+    const est = estadoLed(r), brilho = brilhoDaCorrente(e, r.i);
+    b.textContent = `${mA(r.i)} mA · ${TEXTO_LED[est]}${brilho !== null && r.i > 0 ? ` · ≈ ${Math.round(brilho * 100)}% do anúncio` : ''}`;
     b.className = est;
     const iF = fraca?.pecas[p.ref]?.i ?? 0, iN = nova?.pecas[p.ref]?.i ?? 0;
     const f = q(`[data-faixa="${p.ref}"]`);
@@ -791,8 +865,9 @@ function preencherPainel(m, sim) {
   if (pilhas.length === 1 && leds.length === 1 && resistores.length === 1 && sim) {
     const v = aj.pilha[pilhas[0].ref] ?? pilhas[0].eletrica.v, ohms = aj.resistor[resistores[0].ref] ?? resistores[0].valor;
     const r = sim.pecas[leds[0].ref], j = joelho(leds[0].eletrica);
+    const rp = pilhas[0].eletrica.r_interna || 0;
     formula.textContent = r.acende
-      ? `corrente = (pilha − LED) ÷ resistor = (${volts(v)} − ${volts(r.v)}) ÷ ${ohms} = ${mA(r.i)} mA`
+      ? `corrente = (pilha − LED) ÷ (resistor${rp ? ' + pilha' : ''}) = (${volts(v)} − ${mm(r.v)}) ÷ ${rp ? `(${ohms} + ${rp})` : ohms} = ${mA(r.i)} mA`
       : (v <= j ? `a pilha (${volts(v)} V) não passa dos ${volts(j)} V que o LED pede pra começar: ele fica apagado` : 'o circuito está aberto: a corrente não tem por onde passar');
   } else formula.textContent = '';
 }
@@ -838,10 +913,14 @@ function inspecionar(m, sel, sim) {
       linhas = p.pinos.filter(x => !vistos.has(rotulo(x)) && vistos.add(rotulo(x)))
         .map(x => [rotulo(x), outros(x).join(', ') || 'nada ainda']);
     }
-    if (p.valor_txt) linhas.push(['Valor', `${p.valor_txt} Ω`]);
+    if (p.valor_txt) linhas.push(['Valor', ohmsTxt(+p.valor_txt)]);
+    if (p.loja) linhas.push(['Tamanho', p.loja.tamanho || '—'], ['Preço', p.loja.preco != null ? `US$ ${String(p.loja.preco).replace('.', ',')} cada` : '—']);
     linhas.push(['Posição', `${mm(p.x, 1)}, ${mm(p.y, 1)} mm`]);
     if (p.exemplo) linhas.push(['Medidas', 'de exemplo, sem datasheet', true]);
-    return { tipo: p.nome, titulo: p.ref, linhas, linha: p.linha, explica: p.explica, agora: agoraDe(m, p.ref, sim) };
+    if (p.pendente?.length) linhas.push(['Falta conferir', p.pendente.join('; '), true]);
+    const bloco = S.projeto?.blocos.find(b => b.ref === p.ref);
+    return { tipo: `${p.ref}${bloco ? ' · ' + bloco.funcao : ''}`, titulo: p.nome, nomePeca: true, linhas, linha: p.linha,
+      explica: p.explica, agora: agoraDe(m, p.ref, sim), loja: p.loja, compra: p.compra };
   }
   if (sel.k === 'pino') {
     const [ref, n] = sel.nome.split('.');
@@ -860,7 +939,7 @@ function inspecionar(m, sel, sim) {
     else explica += `A trilha leva o sinal dele até ${fora.join(', ')}; tudo isso é a mesma net (${pino.net}).`;
     let agora = '';
     if (sim?.nets && pino.net in sim.nets) agora = `agora: ${volts(sim.nets[pino.net])} V neste pino`;
-    return { tipo: `Pino ${n} de ${ref}`, titulo: nomePino(m, sel.nome), linhas, linha: p.linha, explica, agora };
+    return { tipo: `${p.nome} · pino ${n}`, titulo: nomePino(m, sel.nome), linhas, linha: p.linha, explica, agora };
   }
   if (sel.k === 'trilha') {
     const t = m.trilhas[sel.i];
@@ -1013,63 +1092,165 @@ async function desenharInicio() {
   if (html !== S.brutos.inicio) $('#main').innerHTML = S.brutos.inicio = html;   // so troca se mudou (nao engole clique)
 }
 
-// ---------- aba Processo: a historia do projeto ----------
+// ---------- aba Processo: a historia do projeto, na ordem em que a gente pensa ----------
+// objetivo (o que quer) -> blocos (o tipo de cada peca) -> carrinho (pecas de verdade) -> placa -> testes -> fabrica -> montar
 function passo(n, estado, titulo, corpo) {
   return `<li class="passo ${estado}"><span class="marca" aria-hidden="true">${estado === 'ok' ? '✓' : n}</span>
     <div class="conteudo"><h3>${n}. ${titulo}</h3>${corpo}</div></li>`;
 }
 
+// simbolo de cada bloco, desenhado como no esquema eletrico
+const ICONES = {
+  pilha: '<path d="M2 12h12M14 4v16M20 8v8M20 12h18"/><path d="M6 6h4M8 4v4" stroke-width="1.4"/>',
+  botao: '<path d="M2 17h9M29 17h9M11 9h18M20 9V3"/><circle cx="12" cy="17" r="1.6"/><circle cx="28" cy="17" r="1.6"/>',
+  resistor: '<path d="M2 12h8M30 12h8"/><rect x="10" y="7" width="20" height="10" rx="1"/>',
+  led: '<path d="M2 13h10M26 13h12M12 6l14 7-14 7z M26 6v14"/><path d="M24 4l5-4M28 6l5-4" stroke-width="1.4"/>',
+};
+const icone = b => `<svg viewBox="0 0 40 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[b] || ''}</svg>`;
+const dolar = v => v == null ? '?' : `US$ ${v < 0.1 ? v.toFixed(4) : v.toFixed(2)}`.replace('.', ',');
+const milhar = n => Number(n || 0).toLocaleString('pt-BR');
+const FRACAO = { fraca: '¼ do', media: 'metade do', forte: 'o' };
+
+function fotoDa(peca) {
+  if (peca?.foto) return `<img class="foto" src="${BASE}pecas/${encodeURIComponent(peca.foto)}" alt="" loading="lazy">`;
+  return peca ? `<img class="foto" src="/api/foto?codigo=${encodeURIComponent(peca.codigo)}" alt="" loading="lazy">` : '<span class="sem-foto"></span>';
+}
+
+// a conta do freio: do brilho pedido ao resistor
+function contaHTML(c, peca) {
+  if (!c) return '';
+  if (c.falta) return `<div class="conta"><span>Pra fazer a conta do resistor falta: ${esc(c.falta.join(', '))}.</span></div>`;
+  if (c.impossivel) return `<div class="conta"><span class="nao-bate">Essa pilha não tem força pra esse brilho, nem sem resistor.</span></div>`;
+  const resto = c.r_s + c.r_interna;
+  const horas = c.mah && c.i_padrao > 0 ? c.mah / (c.i_padrao * 1000) : null;
+  return `<div class="conta">
+    <span>Você pediu luz <b>${esc(c.resposta === 'media' ? 'média' : c.resposta)}</b>: ${FRACAO[c.resposta]} brilho que o fabricante anuncia. Pela curva do LED, isso é ≈ ${mA(c.i)} mA.</span>
+    <span class="mono">(pilha − LED) ÷ corrente = (${volts(c.v)} − ${mm(c.joelho)}) ÷ ${mA(c.i)} mA ≈ ${Math.round(c.ohms + resto)} Ω</span>
+    <span>O LED e a pilha já freiam ${mm(resto, 1)} Ω sozinhos, então o resistor fica com ≈ ${Math.round(c.ohms)} Ω. O valor de loja mais perto é <b>${ohmsTxt(c.padrao)}</b>: dá ${mA(c.i_padrao)} mA, ≈ ${Math.round(c.brilho * 100)}% do brilho do anúncio${horas ? `, e a pilha dura no máximo ≈ ${horas.toFixed(0)} h com o botão apertado` : ''}.</span>
+    ${c.i_testada && c.i_padrao > c.i_testada ? `<span class="aviso">Acima dos ${mA(c.i_testada)} mA que o fabricante da pilha testou: funciona, mas ela rende menos que isso.</span>` : ''}
+    ${peca ? (c.bate ? `<span class="bate">✓ o resistor do carrinho é esse</span>` : `<span class="nao-bate">✗ o do carrinho é ${ohmsTxt(peca.valor)}: troque pelo de ${ohmsTxt(c.padrao)}</span>`) : ''}
+  </div>`;
+}
+
+function opcoesHTML(ref) {
+  const o = S.opcoes[ref];
+  if (!o) return '';
+  if (o.carregando) return '<div class="opcoes"><span class="sub">Procurando na loja…</span></div>';
+  if (o.erro) return `<div class="opcoes"><span class="aviso">${esc(o.erro)}</span></div>`;
+  const cards = o.itens.map(i => `<div class="opcao${i.escolhida ? ' escolhida' : ''}">
+      <img src="/api/foto?codigo=${encodeURIComponent(i.codigo)}" alt="" loading="lazy">
+      <b>${esc(i.modelo)}</b><span class="sub">${esc(i.marca)} · ${esc(i.codigo)}</span>
+      <span>${esc(i.tamanho)}</span>
+      <span class="sub">${dolar(i.preco)} · ${milhar(i.estoque)} em estoque</span>
+      <span class="sub">${i.conferida ? '✓ datasheet conferido' : 'datasheet ainda não conferido'}</span>
+      ${i.escolhida ? '<span class="selo ok">no carrinho</span>' : `<button type="button" data-escolher="${esc(ref)}" data-codigo="${esc(i.codigo)}" ${S.mexendo ? 'disabled' : ''}>Escolher</button>`}
+    </div>`).join('');
+  return `<div class="opcoes">${cards || '<span class="vazio-op sub">A loja não achou nenhuma peça de furo com estoque pra isso.</span>'}
+    <span class="sub">Busca "${esc(o.busca)}" no estoque da JLCPCB · só peça de furo (de soldar na mão) com estoque${o.alvo ? ` · só ${ohmsTxt(o.alvo)}` : ''}</span></div>`;
+}
+
 function desenharProcesso(main) {
-  const m = S.modelo, t = S.testes, obj = t?.objetivo, c = S.cotacao;
+  const m = S.modelo, t = S.testes, obj = t?.objetivo, c = S.cotacao, pj = S.projeto;
   const reqs = obj?.itens || [];
   const falha = t && !t.rodando && t.etapas.find(e => e.estado === 'falhou');
+  const ocupado = S.mexendo || t?.rodando;
 
-  const p1 = obj ? passo(1, reqs.length && reqs.every(i => i.status === 'ok') ? 'ok' : 'falha', 'Objetivo', `
-      <p class="destaque">${esc(obj.titulo || PLACA)}</p>${obj.texto ? `<p>${esc(obj.texto)}</p>` : ''}
-      ${obj.erro ? `<p class="erro-req">${esc(obj.erro)}</p>` : ''}
-      <ul class="reqs">${reqs.map(i => `<li class="${i.status === 'ok' ? 'ok' : 'falha'}">${i.status === 'ok' ? '✓' : '✗'} ${esc(i.id)} ${esc(i.titulo)}${i.status === 'ok' ? '' : ` · ${esc(i.motivo)}`}</li>`).join('')}</ul>
-      <button type="button" class="link" data-aba="thinking">Ver os requisitos →</button>`)
-    : passo(1, 'pendente', 'Objetivo', '<p>Ainda não tem <span class="mono">requisitos.md</span>.</p>');
+  // 1. objetivo: o que a placa faz e o que a gente quer dela
+  const listaReqs = reqs.length ? `<ul class="reqs">${reqs.map(i => `<li class="${i.status === 'ok' ? 'ok' : 'falha'}">${i.status === 'ok' ? '✓' : '✗'} ${esc(i.id)} ${esc(i.titulo)}${i.status === 'ok' ? '' : ` · ${esc(i.motivo)}`}</li>`).join('')}</ul>` : '';
+  const perguntas = (pj?.perguntas || []).map(q => {
+    const escolhida = q.opcoes.find(o => o.id === q.resposta);
+    return `<div class="pergunta"><span class="pergunta-txt">${esc(q.texto)}</span>
+      <div class="escolhas" role="group" aria-label="${esc(q.texto)}">${q.opcoes.map(o => `<button type="button" data-responder="${esc(q.id)}" data-resposta="${esc(o.id)}" aria-pressed="${q.resposta === o.id}" ${ocupado ? 'disabled' : ''}>${esc(o.nome)}</button>`).join('')}</div>
+      <span class="sub">${escolhida ? esc(escolhida.explica) : 'Escolha uma: é daqui que sai o resistor.'}${q.quem && q.quem !== 'Luiz' ? ` · ${esc(q.quem)}, clique pra mudar` : ''}</span></div>`;
+  }).join('');
+  const titulo = pj?.objetivo || obj?.titulo || PLACA, frase = pj?.frase || obj?.texto;
+  const p1 = passo(1, reqs.length && reqs.every(i => i.status === 'ok') && (pj?.perguntas || []).every(q => q.resposta) ? 'ok' : 'falha', 'Objetivo', `
+      <p class="destaque">${esc(titulo)}</p>${frase ? `<p>${esc(frase)}</p>` : ''}
+      ${perguntas}
+      ${obj?.erro ? `<p class="erro-req">${esc(obj.erro)}</p>` : ''}
+      ${listaReqs}${reqs.length ? '<button type="button" class="link" data-aba="thinking">Ver os requisitos →</button>' : ''}`);
 
+  // 2. blocos: o tipo de cada peca, sem numero ainda
+  let p2, p3;
+  if (pj) {
+    const classica = pj.blocos.map(b => b.bloco).join() === 'pilha,botao,resistor,led';
+    p2 = passo(2, 'ok', 'Blocos', `
+      <p>Antes de qualquer número: que tipo de peça faz cada parte do trabalho.${classica ? ' A corrente sai do + da pilha, passa pelos blocos nessa ordem e volta pelo −.' : ''}</p>
+      <div class="cadeia">${pj.blocos.map((b, i) => `${i ? '<span class="seta" aria-hidden="true">→</span>' : ''}<div class="bloco">
+        <span class="icone">${icone(b.bloco)}</span><span class="funcao">${esc(b.funcao)}</span><b>${esc(b.nome)}</b>
+        <span class="por-que">${esc(b.por_que)}</span></div>`).join('')}</div>`);
+
+    // 3. carrinho: uma peca de verdade da loja pra cada bloco
+    const itens = pj.blocos.map(b => {
+      const pc = b.peca;
+      const avisos = [];
+      if (!pc) avisos.push('Ainda sem peça: clique em Escolher.');
+      if (pc?.pendente?.length) avisos.push(`Falta o Claude conferir no datasheet: ${pc.pendente.join('; ')}.`);
+      if (pc && b.na_placa === false) avisos.push('Ainda não está na placa: peça pro Claude pôr.');
+      return `<li class="item">${fotoDa(pc)}<div class="info">
+        <span class="sub">${esc(b.ref)} · ${esc(b.funcao)} · ${esc(b.nome)}</span>
+        <b>${esc(pc?.nome || 'falta escolher')}</b>
+        ${pc ? `<span class="sub">${esc(pc.marca)} ${esc(pc.modelo)} · ${esc(pc.tamanho)}</span>
+        <span class="sub">${dolar(pc.preco)} cada · ${milhar(pc.estoque)} em estoque${b.quem ? ` · ${esc(b.quem === 'Luiz' ? 'você escolheu' : b.quem)}` : ''}</span>` : ''}
+        ${avisos.map(a => `<span class="aviso">${esc(a)}</span>`).join('')}
+        ${b.bloco === 'resistor' ? contaHTML(b.conta, pc) : ''}
+        <div class="links">${pc?.datasheet ? `<a href="${esc(pc.datasheet)}" target="_blank" rel="noopener">Datasheet ↗</a>` : ''}
+          ${/^https:\/\//.test(pc?.link || '') ? `<a href="${esc(pc.link)}" target="_blank" rel="noopener">Na loja ↗</a>` : ''}
+          <button type="button" data-trocar="${esc(b.ref)}" aria-expanded="${!!S.opcoes[b.ref]}">${S.opcoes[b.ref] ? 'Fechar opções' : pc ? 'Trocar' : 'Escolher'}</button></div>
+        </div>${opcoesHTML(b.ref)}</li>`;
+    }).join('');
+    const extras = [...new Set(pj.blocos.flatMap(b => b.peca?.extras || []))];
+    const cheio = pj.blocos.every(b => b.peca && !b.peca.pendente.length && b.na_placa !== false) && pj.blocos.every(b => b.conta?.bate !== false);
+    p3 = passo(3, cheio ? 'ok' : 'falha', 'Carrinho', `
+      <p>Uma peça de verdade, que a loja tem em estoque, pra cada bloco. O desenho dela na placa é o oficial do fabricante, não um chute.</p>
+      ${S.recado ? `<p class="aviso">${esc(S.recado)}</p>` : ''}
+      <ul class="carrinho">${itens}</ul>
+      <span class="total">Peças: <b>${dolar(pj.total)}</b> (uma de cada, na LCSC, a loja irmã da JLCPCB)${extras.length ? ` + ${esc(extras.join(', '))}` : ''}. A fábrica entrega só a placa nua: as peças você solda em casa.</span>`);
+  } else {
+    // placa de antes da ordem nova: sem projeto.json, mostra a lista de compras antiga
+    const compras = m?.compras || [];
+    p2 = passo(2, 'pendente', 'Blocos', '<p>Esta placa é de antes da ordem nova: ainda não tem os blocos (<span class="mono">projeto.json</span>).</p>');
+    p3 = passo(3, 'pendente', 'Carrinho', m ? `<p>Peças desta placa, ainda sem loja:</p>
+      <ul class="compras">${compras.map(x => `<li><span class="mono">${esc(x.ref)}</span><b>${esc(x.nome)}</b>${x.valor ? `<span>${esc(x.valor)} Ω</span>` : ''}${x.compra ? `<span class="sub">${esc(x.compra)}</span>` : ''}</li>`).join('')}</ul>` : '<p>Aparece quando a placa for gerada.</p>');
+  }
+
+  // 4. placa: as pecas do carrinho, posicionadas
   const versoes = [...S.versoes].reverse();
-  const p2 = m ? passo(2, 'ok', 'Placa', `<div class="placa-resumo">${miniatura(m)}<div style="display:flex;flex-direction:column;gap:10px">
+  const forafora = pj ? pj.blocos.filter(b => b.peca && b.na_placa === false).map(b => b.ref) : [];
+  const p4 = m ? passo(4, forafora.length ? 'falha' : 'ok', 'Placa', `<div class="placa-resumo">${miniatura(m)}<div style="display:flex;flex-direction:column;gap:10px">
       <span class="sub mono">${mm(m.placa.w, 0)} × ${mm(m.placa.h, 0)} mm · ${m.pecas.length} peças · ${m.trilhas.length} trilhas</span>
+      ${forafora.length ? `<span class="aviso">A placa ainda usa a peça antiga de ${esc(forafora.join(', '))}.</span>` : ''}
       <ol class="versoes-lista">${versoes.map(v => `<li><span class="mono">v${v.v}</span> ${esc(v.frase)} <span class="sub">· ${esc(v.quando)}</span></li>`).join('')}</ol>
       <button type="button" class="link" data-aba="projeto">Abrir a placa →</button></div></div>`)
-    : passo(2, 'pendente', 'Placa', '<p>Ainda não foi gerada.</p>');
+    : passo(4, 'pendente', 'Placa', '<p>Ainda não foi gerada.</p>');
 
+  // 5. testes
   const rodar = S.api ? '<button type="button" class="link" data-rodar>Rodar os testes de novo ↻</button>' : '';
-  let p3 = passo(3, 'pendente', 'Testes', `<p>Ainda não rodou.</p><div class="links">${rodar}</div>`);
+  let p5 = passo(5, 'pendente', 'Testes', `<p>Ainda não rodou.</p><div class="links">${rodar}</div>`);
   if (t) {
     const texto = t.rodando ? 'Rodando agora…'
       : falha ? `Parou na etapa ${t.etapas.indexOf(falha) + 1}, ${esc(falha.nome.toLowerCase())}: ${esc(traduz(m, falha.detalhe))}`
       : `As ${t.etapas.length} etapas passaram: ${t.etapas.map(e => e.nome.toLowerCase()).join(', ')}.`;
-    p3 = passo(3, t.rodando ? 'rodando' : falha ? 'falha' : 'ok', 'Testes', `<p>${texto}</p>
+    p5 = passo(5, t.rodando ? 'rodando' : falha ? 'falha' : 'ok', 'Testes', `<p>${texto}</p>
       ${!t.rodando && t.resumo ? `<div class="explica"><b>Resumo do Claude</b><p>${esc(t.resumo)}</p></div>` : ''}
       <div class="links"><button type="button" class="link" data-aba="testes">Ver as etapas →</button>${rodar}</div>`);
   }
 
-  // peças: a fabrica entrega a placa nua, o resto se compra
-  const compras = m?.compras || [];
-  const compravel = compras.length && compras.every(x => x.compra || !x.ref);
-  const p4 = m ? passo(4, compravel ? 'ok' : 'pendente', 'Peças', `
-      <p>A fábrica entrega só a placa nua, sem nada soldado. As peças você compra à parte e solda em casa.${compravel ? '' : ' Esta placa ainda tem peça de exemplo, sem um modelo certo pra comprar.'}</p>
-      <ul class="compras">${compras.map(x => `<li><span class="mono">${esc(x.ref)}</span><b>${esc(x.nome)}</b>${x.valor ? `<span>${esc(x.valor)} Ω</span>` : ''}${x.compra ? `<span class="sub">${esc(x.compra)}</span>` : ''}</li>`).join('')}</ul>`)
-    : passo(4, 'pendente', 'Peças', '<p>Aparece quando a placa for gerada.</p>');
-
-  let corpo5 = '<p>Ainda não foi gerada.</p>', estado5 = 'pendente';
+  // 6. fabrica
+  let corpo6 = '<p>Ainda não foi gerada.</p>', estado6 = 'pendente';
+  const travas = m?.fabrica ? [...(m.fabrica.falta_datasheet || []), ...(m.fabrica.falta_conferir || [])] : [];
   if (m?.fabrica && !m.fabrica.pronta) {
-    corpo5 = `<p>O <span class="mono">fabrica.zip</span> fica travado enquanto tiver medida de exemplo, sem datasheet: ${esc(m.fabrica.falta_datasheet.join(', '))}.</p>`;
+    corpo6 = `<p>O <span class="mono">fabrica.zip</span> fica travado enquanto tiver peça sem datasheet conferido: ${esc(travas.join(', '))}.</p>`;
   } else if (m?.fabrica && (falha || !t || t.rodando)) {
-    corpo5 = '<p>O <span class="mono">fabrica.zip</span> sai quando todos os testes passarem.</p>';
+    corpo6 = '<p>O <span class="mono">fabrica.zip</span> sai quando todos os testes passarem.</p>';
   } else if (m?.fabrica) {
-    corpo5 = `<p>O <span class="mono">fabrica.zip</span> está pronto: contorno, cobre de cima e de baixo, máscara, serigrafia e os furos com e sem cobre.</p>
+    corpo6 = `<p>O <span class="mono">fabrica.zip</span> está pronto: contorno, cobre de cima e de baixo, máscara, serigrafia e os furos com e sem cobre.</p>
       <div class="links"><a class="link" href="${BASE}saida/fabrica.zip" download>Baixar fabrica.zip ↓</a></div>`;
   }
   if (c) {
     const antiga = cotacaoAntiga(c, m);
-    estado5 = antiga ? estado5 : 'ok';
-    corpo5 += `<div class="cotacao"><dl>
+    estado6 = antiga ? estado6 : 'ok';
+    corpo6 += `<div class="cotacao"><dl>
         <dt>Site</dt><dd>${esc(c.site)}</dd><dt>Situação</dt><dd>${esc(c.situacao)}${antiga ? ` · era a v${esc(c.versao)}; a placa mudou depois, cotar de novo` : ''}</dd>
         ${c.detectou ? `<dt>A fábrica leu</dt><dd>${esc(c.detectou)}</dd>` : ''}
         ${c.preco ? `<dt>Preço</dt><dd>${esc(c.preco)}</dd>` : ''}
@@ -1077,14 +1258,55 @@ function desenharProcesso(main) {
       ${c.imagem ? `<a href="${BASE}${esc(c.imagem)}" target="_blank" rel="noopener"><img src="${BASE}${esc(c.imagem)}" alt="Cotação no site da ${esc(c.site)}"></a>` : ''}
       ${/^https:\/\//.test(c.url || '') ? `<a class="link" href="${esc(c.url)}" target="_blank" rel="noopener">Abrir o site da ${esc(c.site)} ↗</a>` : ''}</div>`;
   }
-  const p5 = passo(5, estado5, 'Fábrica', corpo5);
-  const ordem = m ? [...m.pecas].sort((a, b) => a.corpo.w * a.corpo.h - b.corpo.w * b.corpo.h).map(p => p.ref) : [];
-  const p6 = passo(6, 'pendente', 'Montar e acender', m
+  const p6 = passo(6, estado6, 'Fábrica', corpo6);
+
+  // 7. montar
+  const nomeDe = ref => pj?.blocos.find(b => b.ref === ref)?.nome.toLowerCase() || ref;
+  const ordem = m ? [...m.pecas].sort((a, b) => a.corpo.w * a.corpo.h - b.corpo.w * b.corpo.h).map(p => nomeDe(p.ref)) : [];
+  const p7 = passo(7, 'pendente', 'Montar e acender', m
     ? `<p>Quando a placa e as peças chegarem: solde do menor pro maior (${esc(ordem.join(', '))}), ponha a pilha e aperte o botão. Antes disso, dá pra ensaiar no ▶ da aba Projeto.</p>`
     : '<p>Depois da fábrica.</p>');
-  main.innerHTML = `<section class="processo" aria-label="Processo">
-    <p class="caminho">O caminho de toda placa: dizer o que ela faz → desenhar → testar no papel → comprar as peças → fabricar → montar e acender.</p>
-    <ol class="passos">${p1}${p2}${p3}${p4}${p5}${p6}</ol></section>`;
+
+  const html = `<p class="caminho">O caminho de toda placa: dizer o que ela tem que fazer → escolher o tipo de cada peça → escolher as peças de verdade na loja → desenhar a placa com elas → testar no papel → fabricar → montar e acender.</p>
+    <ol class="passos">${p1}${p2}${p3}${p4}${p5}${p6}${p7}</ol>`;
+  let secao = main.querySelector('section.processo');
+  if (!secao) { main.innerHTML = '<section class="processo" aria-label="Processo"></section>'; secao = main.querySelector('section.processo'); }
+  if (secao.dataset.html !== html) {   // so troca se mudou, e sem perder a rolagem
+    const rolagem = secao.scrollTop;
+    secao.innerHTML = html;
+    secao.dataset.html = html;
+    secao.scrollTop = rolagem;
+  }
+}
+
+// carrinho: abrir as opcoes de um bloco, escolher uma peca, responder uma pergunta
+async function abrirOpcoes(ref) {
+  if (S.opcoes[ref]) { delete S.opcoes[ref]; return desenhar(); }
+  S.opcoes[ref] = { carregando: true };
+  desenhar();
+  try {
+    const r = await fetch(`/api/opcoes?placa=${encodeURIComponent(PLACA)}&ref=${encodeURIComponent(ref)}`, { cache: 'no-store' });
+    const d = await r.json();
+    if (S.opcoes[ref]) S.opcoes[ref] = r.ok ? d : { erro: d.erro || 'a loja não respondeu' };
+  } catch { if (S.opcoes[ref]) S.opcoes[ref] = { erro: 'sem resposta do app (ele está aberto?)' }; }
+  desenhar();
+}
+
+async function mexer(caminho, corpo, recado) {
+  S.mexendo = true; S.recado = recado; desenhar();
+  try {
+    const r = await fetch(`/api/${caminho}?placa=${encodeURIComponent(PLACA)}`, {
+      method: 'POST', headers: { 'X-Bancada': '1', 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+    const d = await r.json().catch(() => ({}));
+    S.recado = r.ok ? (d.pendente?.length ? `Peça nova no carrinho. Falta o Claude conferir no datasheet: ${d.pendente.join('; ')}.` : 'Feito. Os testes estão rodando de novo com a mudança.')
+      : (d.erro || 'não deu certo');
+    return r.ok;
+  } catch { S.recado = 'sem resposta do app (ele está aberto?)'; return false; }
+  finally {
+    S.mexendo = false; S.brutos.projeto = null; await atualizar(); desenhar();
+    const este = S.recado;
+    setTimeout(() => { if (S.recado === este) { S.recado = ''; desenhar(); } }, 10000);   // o recado sai sozinho
+  }
 }
 
 // ---------- aba Thinking ----------
@@ -1221,6 +1443,16 @@ document.addEventListener('click', async e => {
     return;
   }
   if (b.dataset.abrir) { S.ver = null; S.cx = null; return irPara('projeto', { k: 'peca', ref: b.dataset.abrir }); }
+  if (b.dataset.trocar) return abrirOpcoes(b.dataset.trocar);
+  if (b.dataset.escolher) {
+    const ref = b.dataset.escolher;
+    if (await mexer('escolher', { ref, codigo: b.dataset.codigo }, `Trazendo ${b.dataset.codigo} da loja…`)) delete S.opcoes[ref];
+    return desenhar();
+  }
+  if (b.dataset.responder) {
+    for (const ref of Object.keys(S.opcoes)) delete S.opcoes[ref];   // a conta muda: as opcoes do resistor tambem
+    return mexer('responder', { pergunta: b.dataset.responder, resposta: b.dataset.resposta }, 'Refazendo a conta…');
+  }
   if ('ligar' in b.dataset) return alternarLigado();
   if (b.dataset.chave) { S.ajustes.chave[b.dataset.chave] = !S.ajustes.chave[b.dataset.chave]; return desenhar(); }
   if ('reset' in b.dataset) { S.ajustes = { pilha: {}, resistor: {}, chave: {} }; return desenhar(); }
