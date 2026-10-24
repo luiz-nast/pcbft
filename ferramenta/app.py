@@ -4,6 +4,7 @@ uso: python3 ferramenta/app.py               (abre a janela; fecha sozinho uns m
      python3 ferramenta/app.py --sem-janela  (so o servidor, ate o Ctrl+C)
 """
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -15,6 +16,9 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+import blocos
+import loja
 
 RAIZ = Path(__file__).resolve().parent.parent
 PLACAS = RAIZ / "placas"
@@ -35,10 +39,22 @@ def python():
 
 def placa(nome):
     """pasta da placa, so se for uma pasta direto dentro de placas/ com placa.txt"""
-    pasta = (PLACAS / nome).resolve()
-    if pasta.parent == PLACAS.resolve() and (pasta / "placa.txt").exists():
-        return pasta
+    try:
+        pasta = (PLACAS / nome).resolve()
+        if nome and pasta.parent == PLACAS.resolve() and (pasta / "placa.txt").exists():
+            return pasta
+    except (ValueError, OSError):   # nome com byte nulo e afins
+        pass
     return None
+
+
+def rodar_testes(pasta):
+    """dispara o testar.py dessa placa (um por vez); chamar com a trava"""
+    if pasta.name in rodando and rodando[pasta.name].poll() is None:
+        return False
+    rodando[pasta.name] = subprocess.Popen([python(), str(RAIZ / "ferramenta" / "testar.py"), str(pasta)], cwd=RAIZ,
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return True
 
 
 class Bancada(SimpleHTTPRequestHandler):
@@ -57,11 +73,42 @@ class Bancada(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
+    def servido(self, url):
+        """so bancada/ e placas/, ja resolvido (nada de /bancada/../.git)"""
+        if not url.path.startswith(SERVIDO):
+            return False
+        alvo = Path(self.translate_path(url.path)).resolve()
+        return any(alvo == RAIZ / d or (RAIZ / d) in alvo.parents for d in ("bancada", "placas"))
+
+    def do_HEAD(self):
+        url = urlparse(self.path)
+        if self.headers.get("Host") not in HOSTS or not self.servido(url):
+            self.send_response(404)
+            self.end_headers()
+            return
+        super().do_HEAD()
+
     def do_GET(self):
         ultimo[0] = time.monotonic()
         url = urlparse(self.path)
         if self.headers.get("Host") not in HOSTS:
             return self.responder({"erro": "host"}, 403)
+        q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        if url.path == "/api/projeto":
+            pasta = placa(q.get("placa", ""))
+            return self.responder(blocos.estado(pasta) if pasta else {"erro": "placa não existe"}, 200 if pasta else 404)
+        if url.path == "/api/opcoes":
+            pasta = placa(q.get("placa", ""))
+            if not pasta:
+                return self.responder({"erro": "placa não existe"}, 404)
+            try:
+                return self.responder(blocos.opcoes(pasta, q.get("ref", "")))
+            except ValueError as e:
+                return self.responder({"erro": str(e)}, 400)
+            except loja.SemLoja as e:
+                return self.responder({"erro": str(e)}, 502)
+        if url.path == "/api/foto":
+            return self.foto(q.get("codigo", ""))
         if url.path == "/":
             self.send_response(302)
             self.send_header("Location", "/bancada/")
@@ -71,10 +118,27 @@ class Bancada(SimpleHTTPRequestHandler):
             nomes = sorted(p.name for p in PLACAS.iterdir() if placa(p.name)) if PLACAS.exists() else []
             with trava:
                 vivos = [n for n, p in rodando.items() if p.poll() is None]
-            return self.responder({"placas": nomes, "rodando": vivos})
-        if not url.path.startswith(SERVIDO):
+            return self.responder({"placas": nomes, "rodando": vivos, "raiz": str(RAIZ)})
+        if not self.servido(url):
             return self.responder({"erro": "não existe"}, 404)
         super().do_GET()
+
+    def foto(self, codigo):
+        """foto da peca na LCSC (fica no cache do loja.py)"""
+        if not loja.CODIGO.match(codigo):
+            return self.responder({"erro": "código"}, 400)
+        try:
+            url = loja.pagina(codigo)["foto"]
+            jpg = loja.pedir(url, validade=None, binario=True) if url else None
+        except loja.SemLoja:
+            jpg = None
+        if not jpg:
+            return self.responder({"erro": "sem foto"}, 404)
+        self.send_response(200)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(jpg)))
+        self.end_headers()
+        self.wfile.write(jpg)
 
     def do_POST(self):
         ultimo[0] = time.monotonic()
@@ -82,18 +146,39 @@ class Bancada(SimpleHTTPRequestHandler):
         if self.headers.get("Host") not in HOSTS:
             return self.responder({"erro": "host"}, 403)
         # o cabecalho proprio faz o navegador barrar pedido vindo de outro site
-        if url.path != "/api/testar" or self.headers.get("X-Bancada") != "1":
+        if url.path not in ("/api/testar", "/api/escolher", "/api/responder") or self.headers.get("X-Bancada") != "1":
             return self.responder({"erro": "não existe"}, 404)
         nome = parse_qs(url.query).get("placa", [""])[0]
         pasta = placa(nome)
         if not pasta:
             return self.responder({"erro": f"a placa '{nome}' não existe"}, 404)
+        try:
+            tamanho = int(self.headers.get("Content-Length") or 0)
+            corpo = json.loads(self.rfile.read(tamanho) or b"{}") if 0 <= tamanho <= 10_000 else None
+        except ValueError:
+            corpo = None
+        if not isinstance(corpo, dict):
+            return self.responder({"erro": "corpo inválido"}, 400)
         with trava:   # uma rodada por placa de cada vez; a chave e a pasta de verdade, nao o texto da URL
-            if pasta.name in rodando and rodando[pasta.name].poll() is None:
-                return self.responder({"ok": True, "ja_rodando": True})
-            rodando[pasta.name] = subprocess.Popen([python(), str(RAIZ / "ferramenta" / "testar.py"), str(pasta)], cwd=RAIZ,
-                                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.responder({"ok": True})
+            ocupada = pasta.name in rodando and rodando[pasta.name].poll() is None
+            if url.path == "/api/testar":
+                return self.responder({"ok": True, "ja_rodando": not rodar_testes(pasta)})
+            if ocupada:   # nao mexe no placa.txt no meio de uma rodada
+                return self.responder({"erro": "os testes estão rodando; tenta de novo em uns segundos"}, 409)
+            try:
+                if url.path == "/api/escolher":
+                    ref, codigo = str(corpo.get("ref", "")), str(corpo.get("codigo", ""))
+                    if not re.fullmatch(r"[A-Za-z_]\w*", ref) or not loja.CODIGO.match(codigo):
+                        return self.responder({"erro": "ref ou código inválido"}, 400)
+                    feito = blocos.escolher(pasta, ref, codigo)
+                else:
+                    feito = blocos.responder(pasta, str(corpo.get("pergunta", "")), str(corpo.get("resposta", "")))
+            except ValueError as e:
+                return self.responder({"erro": str(e)}, 400)
+            except loja.SemLoja as e:
+                return self.responder({"erro": str(e)}, 502)
+            rodar_testes(pasta)
+        self.responder({"ok": True, **(feito or {})})
 
 
 def abrir_janela(url):
@@ -122,10 +207,10 @@ if __name__ == "__main__":
             servidor = ThreadingHTTPServer(("127.0.0.1", PORTA), partial(Bancada, directory=str(RAIZ)))
             break
         except OSError:   # porta ocupada: e um app nosso? (o pedido tambem renova o relogio de ociosidade dele)
-            try:
+            try:   # e este mesmo repositorio? (outra copia do Sianvolt abriria as placas erradas)
                 with urllib.request.urlopen(f"http://127.0.0.1:{PORTA}/api/placas", timeout=2) as r:
-                    vivo = b"placas" in r.read()
-            except OSError:
+                    vivo = json.loads(r.read()).get("raiz") == str(RAIZ)
+            except (OSError, ValueError):
                 vivo = False
             if vivo:
                 if janela:
