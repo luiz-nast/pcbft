@@ -2,10 +2,11 @@
 
 O mesmo modelo existe em JS na bancada (funcao simular), pro painel responder na hora. Mudou aqui, muda lá.
 - resistor: I = V / R
-- LED aceso: V = joelho + r_s · I (joelho = vf − r_s · i_teste, do datasheet); abaixo do joelho não passa nada
+- LED aceso: V = joelho + r_s · I (joelho = vf − r_s · i_teste, do datasheet); abaixo do joelho não passa nada.
+  O + e o − vêm da peça (mais/menos); sem isso, 1 é o + e 2 o −
 - chave: apertada vira fio; solta, fica aberta
-- pilha: fonte de tensão com uma resistência bem pequena em série (R_PILHA): não é a resistência interna de
-  verdade (o datasheet não dá), é só pra conta fechar com duas pilhas em paralelo
+- pilha: fonte de tensão com a resistência interna em série (r_interna, do gráfico do datasheet); sem ela,
+  uma resistência bem pequena (R_PILHA), só pra conta fechar com duas pilhas em paralelo
 - pino sem net = circuito aberto
 
 A conta é análise nodal: uma incógnita por net (tensão). Fonte com resistência em série entra como
@@ -19,6 +20,15 @@ R_PILHA = 1e-3   # ver docstring
 
 def joelho(e):
     return e["vf"] - e["r_s"] * e["i_teste"]
+
+
+def polos(e):
+    """(+, −) da peca: LED e pilha"""
+    return e.get("mais", "1"), e.get("menos", "2")
+
+
+def r_pilha(e):
+    return e.get("r_interna") or R_PILHA
 
 
 def resolver_linear(A, b):
@@ -93,9 +103,9 @@ def resolver(modelo, ajustes=None):
             elif e["modelo"] == "chave" and aj["chave"].get(ref, False):
                 condutancia(net(ref, e["lados"][0][0]), net(ref, e["lados"][1][0]), 1 / R_CHAVE)
             elif e["modelo"] == "pilha":
-                fonte(net(ref, e["mais"]), net(ref, e["menos"]), aj["pilha"].get(ref, e["v"]), R_PILHA)
+                fonte(net(ref, e["mais"]), net(ref, e["menos"]), aj["pilha"].get(ref, e["v"]), r_pilha(e))
             elif e["modelo"] == "led" and acesos[ref]:
-                fonte(net(ref, "1"), net(ref, "2"), joelho(e), e["r_s"])
+                fonte(net(ref, polos(e)[0]), net(ref, polos(e)[1]), joelho(e), e["r_s"])
         x = resolver_linear(A, b)
         v = {n: x[idx[n]] for n in nets}
         v[terra] = 0.0
@@ -106,7 +116,7 @@ def resolver(modelo, ajustes=None):
             if p["eletrica"]["modelo"] != "led":
                 continue
             ref, e = p["ref"], p["eletrica"]
-            vab = tensao(v, net(ref, "1"), net(ref, "2"))
+            vab = tensao(v, net(ref, polos(e)[0]), net(ref, polos(e)[1]))
             if vab is None:
                 acesos[ref] = False
             elif acesos[ref] and vab < joelho(e) - 1e-9:
@@ -126,15 +136,16 @@ def resolver(modelo, ajustes=None):
             saida[ref] = {"i": i, "p": i * i * ohms, "ohms": ohms}
             entra[f"{ref}.1"], entra[f"{ref}.2"] = i, -i
         elif e["modelo"] == "led":
-            vab = tensao(v, net(ref, "1"), net(ref, "2"))
+            mais, menos = polos(e)
+            vab = tensao(v, net(ref, mais), net(ref, menos))
             i = max((vab - joelho(e)) / e["r_s"], 0.0) if acesos[ref] and vab is not None else 0.0
             saida[ref] = {"i": i, "v": joelho(e) + e["r_s"] * i if i > 0 else (vab or 0.0),
                           "acende": i >= 0.001, "forte": i > (e["i_teste"] + e["i_max"]) / 2, "queima": i > e["i_max"]}
-            entra[f"{ref}.1"], entra[f"{ref}.2"] = i, -i
+            entra[f"{ref}.{mais}"], entra[f"{ref}.{menos}"] = i, -i
         elif e["modelo"] == "pilha":
             volts = aj["pilha"].get(ref, e["v"])
             vab = tensao(v, net(ref, e["mais"]), net(ref, e["menos"]))
-            i = (volts - vab) / R_PILHA if vab is not None else 0.0   # corrente que sai do +
+            i = (volts - vab) / r_pilha(e) if vab is not None else 0.0   # corrente que sai do +
             saida[ref] = {"i": i, "v": volts}
             entra[f"{ref}.{e['mais']}"], entra[f"{ref}.{e['menos']}"] = -i, i
         elif e["modelo"] == "chave":

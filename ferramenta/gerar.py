@@ -10,6 +10,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
+import blocos
 from biblioteca import BIBLIOTECA
 from letras import tracos
 
@@ -97,32 +98,58 @@ def ler(texto):
     return lido
 
 
-# 2. todo tipo precisa existir na biblioteca
-def conferir_tipos(lido):
+# 2. todo tipo precisa existir na biblioteca (a do repositorio ou as pecas que vieram da loja pra esta placa)
+def biblioteca(pasta=None):
+    return {**BIBLIOTECA, **(blocos.carregar_pecas(pasta) if pasta else {})}
+
+
+def conferir_tipos(lido, bib=BIBLIOTECA):
     for p in lido["pecas"].values():
-        if p["tipo"] not in BIBLIOTECA:
-            raise ErroTxt(p["linha"], f"o tipo '{p['tipo']}' não existe na biblioteca", [p["ref"]])
+        if p["tipo"] not in bib:
+            dica = " (peça da loja: escolha ela no carrinho do Sianvolt ou importe com loja.py)" if re.match(r"C\d+$", p["tipo"]) else ""
+            raise ErroTxt(p["linha"], f"o tipo '{p['tipo']}' não existe na biblioteca{dica}", [p["ref"]])
 
 
 # 3. montar o modelo: pinos com posicao absoluta, nets e trilhas
 def forma(pad):
+    if isinstance(pad, dict):   # peca da loja: ja vem {"forma": "C"|"R"|"O", ...}
+        return dict(pad)
     if isinstance(pad, tuple):
         return {"forma": "R", "w": pad[0], "h": pad[1]}
     return {"forma": "C", "d": pad}
 
 
-def montar(lido):
-    conferir_tipos(lido)
+def pinos_do_tipo(tipo):
+    """(n, dx, dy, pad, furo, net fixa) de cada pino, nos dois formatos da biblioteca"""
+    for n, v in tipo["pinos"].items():
+        if isinstance(v, dict):   # peca da loja
+            yield n, v["x"], v["y"], v["pad"], v["furo"], tipo.get("pinos_fixos", {}).get(n)
+        else:
+            dx, dy, pad, *net = v
+            yield n, dx, dy, pad, tipo["furo"], net[0] if net else None
+
+
+def montar(lido, bib=BIBLIOTECA):
+    conferir_tipos(lido, bib)
     pecas, pinos = [], {}   # pinos: "R1.1" -> pino
     for p in lido["pecas"].values():
-        tipo = BIBLIOTECA[p["tipo"]]
+        tipo = bib[p["tipo"]]
+        if tipo.get("valor") is not None:   # resistor da loja: o valor e o da peca comprada
+            if p["valor"] is not None and p["valor"] != tipo["valor"]:
+                raise ErroTxt(p["linha"], f"{p['ref']} é a peça {p['tipo']} da loja, de {blocos.ohms_txt(tipo['valor'])}; "
+                                          f"o {p['valor_txt']} do txt não bate (tire o valor da linha)", [p["ref"]])
+            p = {**p, "valor": tipo["valor"], "valor_txt": f"{tipo['valor']:g}"}
+        loja = tipo.get("loja")
         peca = {**p, "nome": tipo["nome"], "explica": tipo["explica"], "exemplo": tipo["fonte"] is None,
+                "pendente": tipo.get("pendente", []), "bloco": tipo.get("bloco"),
                 "corpo": {"w": tipo["corpo"][0], "h": tipo["corpo"][1], "redondo": tipo.get("redondo", False)},
+                "desenho": tipo.get("desenho"),
                 "juntos": tipo.get("juntos", []), "eletrica": tipo.get("eletrica"), "compra": tipo.get("compra"),
+                "loja": {k: loja.get(k) for k in ("codigo", "preco", "minimo", "link", "datasheet", "foto", "tamanho")} if loja else None,
                 "pinos": []}
-        for n, (dx, dy, pad, *net) in tipo["pinos"].items():
+        for n, dx, dy, pad, furo, net in pinos_do_tipo(tipo):
             pino = {"n": n, "nome": tipo.get("nomes", {}).get(n), "x": r(p["x"] + dx), "y": r(p["y"] + dy),
-                    "pad": forma(pad), "furo": tipo["furo"], "net": net[0] if net else None}
+                    "pad": forma(pad), "furo": furo, "net": net}
             peca["pinos"].append(pino)
             pinos[f"{p['ref']}.{n}"] = pino
         pecas.append(peca)
@@ -150,7 +177,7 @@ def montar(lido):
             nome.setdefault(raiz(pino["net"]), pino["net"])
             junta(p, pino["net"], lido["pecas"][p.split(".")[0]]["linha"])
     for ref, peca in lido["pecas"].items():   # pinos ligados por dentro da peca (ex: botao 1-2 e 3-4)
-        for a, b in BIBLIOTECA[peca["tipo"]].get("juntos", []):
+        for a, b in bib[peca["tipo"]].get("juntos", []):
             junta(f"{ref}.{a}", f"{ref}.{b}", peca["linha"])
     for lg in lido["ligas"]:
         for ponta in (lg["de"], lg["ate"]):
@@ -187,7 +214,7 @@ def montar(lido):
     for p, net in fixa.items():
         ilha[raiz_ilha(p)] = raiz_ilha(primeiro.setdefault((p.split(".")[0], net), p))
     for ref, peca in lido["pecas"].items():
-        for a, b in BIBLIOTECA[peca["tipo"]].get("juntos", []):
+        for a, b in bib[peca["tipo"]].get("juntos", []):
             ilha[raiz_ilha(f"{ref}.{a}")] = raiz_ilha(f"{ref}.{b}")
 
     def firme(p, net):   # a ilha de p tem um pino que nasceu nessa net (ex: GND do DevKit)?
@@ -228,16 +255,17 @@ def montar(lido):
 
     # fabrica.zip so sai quando toda medida veio de datasheet (nenhum numero inventado vai pra fabrica)
     exemplo = [p["ref"] for p in pecas if p["exemplo"]]
+    pendente = [p["ref"] for p in pecas if p["pendente"]]
     # lista de compras: a fabrica entrega so a placa nua
-    compras = [{"ref": p["ref"], "nome": p["nome"], "compra": p["compra"], "valor": p["valor_txt"]} for p in pecas]
-    compras += [{"ref": "", "nome": extra, "compra": "", "valor": None}
-                for p in pecas for extra in BIBLIOTECA[p["tipo"]].get("extras", [])]
+    compras = [{"ref": p["ref"], "nome": p["nome"], "compra": p["compra"], "valor": p["valor_txt"], "loja": p["loja"]} for p in pecas]
+    compras += [{"ref": "", "nome": extra, "compra": "", "valor": None, "loja": None}
+                for p in pecas for extra in bib[p["tipo"]].get("extras", [])]
     # da pra ligar no papel? so se toda peca tem modelo eletrico e todo resistor tem valor
     falta = [p["ref"] for p in pecas if not p["eletrica"]]
     sem_valor = [p["ref"] for p in pecas if p["eletrica"] and p["eletrica"]["modelo"] == "resistor" and p["valor"] is None]
     soltos = [p["ref"] for p in pecas if p["eletrica"] and any(q["net"] is None for q in p["pinos"])]
     return {"placa": lido["placa"], "pecas": pecas, "trilhas": trilhas, "furos": furos,
-            "fabrica": {"pronta": not exemplo, "falta_datasheet": exemplo},
+            "fabrica": {"pronta": not exemplo and not pendente, "falta_datasheet": exemplo, "falta_conferir": pendente},
             "simulacao": {"pode": not falta and not sem_valor and not soltos, "falta_modelo": falta,
                           "sem_valor": sem_valor, "soltos": soltos},
             "compras": compras, "linhas": lido["linhas"]}
@@ -251,7 +279,7 @@ def xy(x, y):
 def abertura(pad):
     if pad["forma"] == "C":
         return f"C,{pad['d']:.3f}"
-    return f"R,{pad['w']:.3f}X{pad['h']:.3f}"
+    return f"{'O' if pad['forma'] == 'O' else 'R'},{pad['w']:.3f}X{pad['h']:.3f}"   # O = oblongo
 
 
 class Gerber:
@@ -276,7 +304,7 @@ class Gerber:
         self.desenho += [xy(*p) + "D01*" for p in pontos[1:]]
 
     def texto(self):
-        cab = ["%TF.GenerationSoftware,projeto-placa,gerar.py*%", f"%TF.FileFunction,{self.funcao}*%"]
+        cab = ["%TF.GenerationSoftware,sianvolt,gerar.py*%", f"%TF.FileFunction,{self.funcao}*%"]
         if self.funcao.startswith("Soldermask"):
             cab.append("%TF.FilePolarity,Negative*%")   # na mascara, desenhar = abrir buraco
         cab += ["%FSLAX46Y46*%", "%MOMM*%", "%LPD*%"]
@@ -356,6 +384,12 @@ def serigrafia(modelo):
 
     for peca in modelo["pecas"]:
         cw, ch, x, y = peca["corpo"]["w"], peca["corpo"]["h"], peca["x"], peca["y"]
+        if peca.get("desenho"):   # peca da loja: o contorno oficial dela (EasyEDA)
+            for traco in peca["desenho"]:
+                linha(SILK, [(x + dx, y + dy) for dx, dy in traco])
+            for pontos in tracos(peca["ref"], x, y + ch / 2 + 0.5, LETRA):
+                linha(LETRA_LINHA, pontos)
+            continue
         if peca["corpo"]["redondo"]:
             borda = [(x + cw / 2 * math.cos(i * math.pi / 24), y + ch / 2 * math.sin(i * math.pi / 24)) for i in range(49)]
         else:
@@ -484,7 +518,7 @@ def salvar_versao(pasta, texto, modelo, frase=None):
 def gerar(pasta, frase=None):
     """placa.txt -> modelo + arquivos + versao. Levanta ErroTxt se o txt tiver erro."""
     texto = (pasta / "placa.txt").read_text()
-    modelo = montar(ler(texto))
+    modelo = montar(ler(texto), biblioteca(pasta))
     salvar_versao(pasta, texto, modelo, frase)
     escrever(modelo, pasta / "saida")
     return modelo

@@ -343,10 +343,12 @@ function eletricaDe(m, nome) {
 }
 
 // ---------- liga o circuito no papel (o mesmo modelo de ferramenta/circuito.py; mudou la, muda aqui) ----------
-const GMIN = 1e-9, R_CHAVE = 1e-3, R_PILHA = 1e-3;   // R_PILHA so pra conta fechar com duas pilhas em paralelo
+const GMIN = 1e-9, R_CHAVE = 1e-3, R_PILHA = 1e-3;   // R_PILHA so quando a pilha nao tem r_interna (conta fecha com duas em paralelo)
 const E24 = [10, 11, 12, 13, 15, 16, 18, 20, 22, 24, 27, 30, 33, 36, 39, 43, 47, 51, 56, 62, 68, 75, 82, 91];
 const OHMS = [1, 10, 100, 1000].flatMap(d => E24.map(v => v * d));   // 10 Ω a 91 kΩ
 const joelho = e => e.vf - e.r_s * e.i_teste;   // onde o LED comeca a conduzir
+const polos = e => [e.mais ?? '1', e.menos ?? '2'];   // + e − do LED (peca da loja diz; senao 1 e 2)
+const rPilha = e => e.r_interna || R_PILHA;
 
 function resolverLinear(A, b) {
   const n = b.length, M = A.map((l, i) => [...l, b[i]]);
@@ -411,8 +413,8 @@ function simular(m, aj) {
       const e = p.eletrica;
       if (e.modelo === 'resistor') cond(net(p.ref, '1'), net(p.ref, '2'), 1 / (aj.resistor[p.ref] ?? p.valor));
       else if (e.modelo === 'chave' && aj.chave[p.ref]) cond(net(p.ref, e.lados[0][0]), net(p.ref, e.lados[1][0]), 1 / R_CHAVE);
-      else if (e.modelo === 'pilha') fonte(net(p.ref, e.mais), net(p.ref, e.menos), aj.pilha[p.ref] ?? e.v, R_PILHA);
-      else if (e.modelo === 'led' && acesos[p.ref]) fonte(net(p.ref, '1'), net(p.ref, '2'), joelho(e), e.r_s);
+      else if (e.modelo === 'pilha') fonte(net(p.ref, e.mais), net(p.ref, e.menos), aj.pilha[p.ref] ?? e.v, rPilha(e));
+      else if (e.modelo === 'led' && acesos[p.ref]) fonte(net(p.ref, polos(e)[0]), net(p.ref, polos(e)[1]), joelho(e), e.r_s);
     }
     const x = resolverLinear(A, b);
     if (!x) return null;
@@ -421,7 +423,7 @@ function simular(m, aj) {
     let mudou = false;   // LED aceso puxando pra tras apaga; apagado com tensao acima do joelho acende
     for (const p of pecas) {
       if (p.eletrica.modelo !== 'led') continue;
-      const vab = tensao(v, net(p.ref, '1'), net(p.ref, '2')), j = joelho(p.eletrica);
+      const vab = tensao(v, net(p.ref, polos(p.eletrica)[0]), net(p.ref, polos(p.eletrica)[1])), j = joelho(p.eletrica);
       if (vab === null) acesos[p.ref] = false;
       else if (acesos[p.ref] && vab < j - 1e-9) { acesos[p.ref] = false; mudou = true; }
       else if (!acesos[p.ref] && vab > j + 1e-9) { acesos[p.ref] = true; mudou = true; }
@@ -435,13 +437,13 @@ function simular(m, aj) {
       const ohms = aj.resistor[ref] ?? p.valor, vab = tensao(v, net(ref, '1'), net(ref, '2')), i = vab === null ? 0 : vab / ohms;
       saida[ref] = { i, p: i * i * ohms, ohms }; entra[`${ref}.1`] = i; entra[`${ref}.2`] = -i;
     } else if (e.modelo === 'led') {
-      const vab = tensao(v, net(ref, '1'), net(ref, '2'));
+      const [mais, menos] = polos(e), vab = tensao(v, net(ref, mais), net(ref, menos));
       const i = acesos[ref] && vab !== null ? Math.max((vab - joelho(e)) / e.r_s, 0) : 0;
       saida[ref] = { i, v: i > 0 ? joelho(e) + e.r_s * i : (vab ?? 0), acende: i >= 0.001, forte: i > (e.i_teste + e.i_max) / 2, queima: i > e.i_max };
-      entra[`${ref}.1`] = i; entra[`${ref}.2`] = -i;
+      entra[`${ref}.${mais}`] = i; entra[`${ref}.${menos}`] = -i;
     } else if (e.modelo === 'pilha') {
       const volts = aj.pilha[ref] ?? e.v, vab = tensao(v, net(ref, e.mais), net(ref, e.menos));
-      const i = vab === null ? 0 : (volts - vab) / R_PILHA;   // corrente que sai do +
+      const i = vab === null ? 0 : (volts - vab) / rPilha(e);   // corrente que sai do +
       saida[ref] = { i, v: volts }; entra[`${ref}.${e.mais}`] = -i; entra[`${ref}.${e.menos}`] = i;
     } else if (e.modelo === 'chave') {
       const ap = !!aj.chave[ref], vab = tensao(v, net(ref, e.lados[0][0]), net(ref, e.lados[1][0]));

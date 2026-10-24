@@ -1,4 +1,4 @@
-"""testar.py: gera a placa e roda a bateria de 6 etapas, escrevendo testes.json a cada etapa.
+"""testar.py: gera a placa e roda a bateria de 7 etapas, escrevendo testes.json a cada etapa.
 
 uso: python ferramenta/testar.py placas/estudo [-m "o que mudou"]
      python ferramenta/testar.py placas/estudo --resumo "texto do Claude no fim da rodada"
@@ -13,9 +13,9 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 
+import blocos
 import circuito
 import gerar
-from biblioteca import BIBLIOTECA
 
 # regras da fabrica: https://jlcpcb.com/capabilities/pcb-capabilities (1-2 camadas, 1 oz, lido em 2026-10-23)
 TRILHA_MIN = 0.10      # largura minima da trilha
@@ -77,6 +77,11 @@ def cobres(modelo):
             net = p["net"] or nome   # pino solto e uma net sozinho
             if p["pad"]["forma"] == "C":
                 lista.append((nome, net, ("seg", (p["x"], p["y"]), (p["x"], p["y"])), p["pad"]["d"] / 2))
+            elif p["pad"]["forma"] == "O":   # oblongo: segmento no meio, raio = metade do lado curto
+                w, h = p["pad"]["w"], p["pad"]["h"]
+                meio = abs(w - h) / 2
+                a, b = ((p["x"] - meio, p["y"]), (p["x"] + meio, p["y"])) if w >= h else ((p["x"], p["y"] - meio), (p["x"], p["y"] + meio))
+                lista.append((nome, net, ("seg", a, b), min(w, h) / 2))
             else:
                 w, h = p["pad"]["w"] / 2, p["pad"]["h"] / 2
                 lista.append((nome, net, ("ret", p["x"] - w, p["y"] - h, p["x"] + w, p["y"] + h), 0))
@@ -156,7 +161,7 @@ def refs(*nomes):
     return saida
 
 
-def nets_partidas(modelo):
+def nets_partidas(modelo, bib):
     """nets cujo cobre ficou em mais de um pedaco (ex: dois GND que nao se encontram)"""
     pai = {}
 
@@ -169,9 +174,10 @@ def nets_partidas(modelo):
         pai[raiz(t["de"])] = raiz(t["ate"])
     for peca in modelo["pecas"]:   # pinos da mesma peca com net fixa ja vem ligados por dentro (GND do DevKit)
         fixos = {}
-        for n, (*_, net) in ((n, v) for n, v in BIBLIOTECA[peca["tipo"]]["pinos"].items() if len(v) == 4):
-            pai[raiz(f"{peca['ref']}.{n}")] = raiz(fixos.setdefault(net, f"{peca['ref']}.{n}"))
-        for a, b in BIBLIOTECA[peca["tipo"]].get("juntos", []):
+        for n, *_, net in gerar.pinos_do_tipo(bib[peca["tipo"]]):
+            if net:
+                pai[raiz(f"{peca['ref']}.{n}")] = raiz(fixos.setdefault(net, f"{peca['ref']}.{n}"))
+        for a, b in bib[peca["tipo"]].get("juntos", []):
             pai[raiz(f"{peca['ref']}.{a}")] = raiz(f"{peca['ref']}.{b}")
     pedacos = {}   # net -> {raiz: [pinos]}
     for peca in modelo["pecas"]:
@@ -191,17 +197,22 @@ def le_txt(ctx):
 
 
 def confere_pecas(ctx):
-    gerar.conferir_tipos(ctx["lido"])
+    bib = ctx["bib"] = gerar.biblioteca(ctx["pasta"])
+    gerar.conferir_tipos(ctx["lido"], bib)
     pecas = ctx["lido"]["pecas"].values()
-    exemplo = sorted({p["ref"] for p in pecas if BIBLIOTECA[p["tipo"]]["fonte"] is None})
-    detalhe = f"{len(pecas)} peças, todas existem na biblioteca"
+    exemplo = sorted({p["ref"] for p in pecas if bib[p["tipo"]]["fonte"] is None})
+    da_loja = [p["ref"] for p in pecas if bib[p["tipo"]].get("loja")]
+    pendente = {p["ref"]: bib[p["tipo"]]["pendente"] for p in pecas if bib[p["tipo"]].get("pendente")}
+    detalhe = f"{len(pecas)} peças" + (f", {len(da_loja)} da loja com o desenho oficial" if da_loja else ", todas existem na biblioteca")
     if exemplo:
         detalhe += f" · medidas de exemplo (sem datasheet): {', '.join(exemplo)}"
+    for ref, falta in pendente.items():
+        detalhe += f" · falta conferir no datasheet de {ref}: {'; '.join(falta)}"
     return detalhe
 
 
 def confere_ligacoes(ctx):
-    modelo = gerar.montar(ctx["lido"])
+    modelo = gerar.montar(ctx["lido"], ctx["bib"])
     ctx["estado"]["versao"] = gerar.salvar_versao(ctx["pasta"], ctx["texto"], modelo, ctx["frase"])
     ctx["arquivos"] = gerar.escrever(modelo, ctx["pasta"] / "saida")
     ctx["modelo"] = modelo
@@ -227,7 +238,7 @@ def confere_ligacoes(ctx):
     for peca in modelo["pecas"]:   # resistor, LED, pilha: os dois pinos na mesma net = a peca esta em curto
         if len(peca["pinos"]) == 2 and peca["pinos"][0]["net"] and peca["pinos"][0]["net"] == peca["pinos"][1]["net"]:
             raise Falhou(f"{peca['ref']} em curto: os dois pinos estão na net {peca['pinos'][0]['net']}", [peca["ref"]], "curto")
-    partidas = nets_partidas(modelo)
+    partidas = nets_partidas(modelo, ctx["bib"])
     if partidas:
         net, pedacos = next(iter(partidas.items()))
         soltos = [p for pedaco in pedacos[1:] for p in pedaco]
@@ -245,9 +256,13 @@ def liga_circuito(ctx):
     modelo = ctx["modelo"]
     sim = modelo["simulacao"]
     if not sim["pode"]:
+        pendente = {p["ref"] for p in modelo["pecas"] if p["pendente"]}
+        sem_modelo = [r for r in sim["falta_modelo"] if r not in pendente]
         motivo = []
-        if sim["falta_modelo"]:
-            motivo.append("sem modelo elétrico: " + ", ".join(sim["falta_modelo"]))
+        if pendente & set(sim["falta_modelo"]):
+            motivo.append("falta conferir no datasheet: " + ", ".join(sorted(pendente & set(sim["falta_modelo"]))))
+        if sem_modelo:
+            motivo.append("sem modelo elétrico: " + ", ".join(sem_modelo))
         if sim["sem_valor"]:
             motivo.append("sem o valor em ohms no placa.txt: " + ", ".join(sim["sem_valor"]))
         raise Pulou("não dá pra ligar no papel ainda · " + " · ".join(motivo))
@@ -265,7 +280,9 @@ def liga_circuito(ctx):
         if e["modelo"] == "led":
             if r_nova["i"] > e["i_max"]:
                 problemas.append((f"{ref} queima: recebe {ma(r_nova['i'])} mA com a pilha nova, o limite é {ma(e['i_max'])} mA", [ref], "queima"))
-            frases.append(f"{ref}: {ma(r_nom['i'])} mA (de {ma(r_fraca['i'])} a {ma(r_nova['i'])} mA entre pilha fraca e nova; o limite é {ma(e['i_max'])} mA)")
+            brilho = blocos.brilho_da_corrente(e, r_nom["i"])
+            quanto = f", ≈ {brilho * 100:.0f}% do brilho do anúncio" if brilho is not None else ""
+            frases.append(f"{ref}: {ma(r_nom['i'])} mA{quanto} (de {ma(r_fraca['i'])} a {ma(r_nova['i'])} mA entre pilha fraca e nova; o limite é {ma(e['i_max'])} mA)")
         elif e["modelo"] == "resistor":
             if r_nova["p"] > e["potencia_max"]:
                 problemas.append((f"{ref} esquenta demais: {mw(r_nova['p'])} mW, aguenta {mw(e['potencia_max'])} mW", [ref], "esquenta"))
@@ -274,7 +291,10 @@ def liga_circuito(ctx):
             problemas.append((f"{ref} passa {ma(abs(r_nova['i']))} mA, o limite dele é {ma(e['i_max'])} mA", [ref], "corrente alta"))
         elif e["modelo"] == "pilha":
             horas = e["mah"] / (r_nom["i"] * 1000) if r_nom["i"] > 1e-6 else None
-            frases.append(f"{ref}: {ma(r_nom['i'])} mA" + (f", dura ≈ {horas:.0f} h apertado" if horas and horas < 1e5 else ""))
+            frase = f"{ref}: {ma(r_nom['i'])} mA" + (f", dura no máximo ≈ {horas:.0f} h apertado" if horas and horas < 1e5 else "")
+            if e.get("i_testada") and r_nom["i"] > e["i_testada"]:   # funciona, mas fora do que o fabricante da pilha mediu
+                frase += f" (acima dos {ma(e['i_testada'])} mA que o fabricante da pilha testou: ela rende menos)"
+            frases.append(frase)
     if problemas:
         problemas.sort(key=lambda p: p[2] != "queima")   # o LED queimando e o que importa, vem primeiro
         raise Falhou(" · ".join(p[0] for p in problemas), rotulos={ref: rot for _, onde, rot in problemas for ref in onde})
@@ -384,9 +404,10 @@ def tira_foto(ctx):
 
 
 # requisitos: o requisitos.md declara o objetivo e, pra cada requisito, as pecas e como verificar
-CHECAGENS = {"existe": 1, "ligado": 2, "separado": 2, "sem_pino_solto": 1, "acende": 1, "nao_queima": 1}   # checagem -> quantos valores
+CHECAGENS = {"existe": 1, "ligado": 2, "separado": 2, "sem_pino_solto": 1, "acende": 1, "nao_queima": 1,
+             "brilho": 1}   # checagem -> quantos valores
 MOTIVOS = {"existe": "falta a peça", "ligado": "falta ligar", "separado": "em curto", "sem_pino_solto": "pino solto",
-           "acende": "não acende", "nao_queima": "queima"}
+           "acende": "não acende", "nao_queima": "queima", "brilho": "brilho diferente do pedido"}
 
 
 def ler_requisitos(texto):
@@ -418,8 +439,8 @@ def ler_requisitos(texto):
     return obj
 
 
-def checar(texto, modelo, sim):
-    """True/False, ou None quando nao da pra saber (acende/nao_queima sem simulacao)"""
+def checar(texto, modelo, sim, projeto=None):
+    """True/False, ou None quando nao da pra saber (acende/nao_queima/brilho sem simulacao)"""
     cmd, *a = texto.split()
     pecas = {p["ref"]: p for p in modelo["pecas"]}
     pecas_da_net = {}   # net -> pecas que tem pino nela
@@ -447,6 +468,14 @@ def checar(texto, modelo, sim):
         if not r or "acende" not in r:   # sem simulacao, ou a peca nao e LED
             return None
         return r["acende"] if cmd == "acende" else not sim["nova"]["pecas"][a[0]]["queima"]
+    if cmd == "brilho":   # o brilho na pilha nominal e o nivel que o Luiz pediu (fraca/media/forte, o mais perto)
+        r = (sim or {}).get("nominal", {}).get("pecas", {}).get(a[0])
+        pedido = ((projeto or {}).get("perguntas", {}).get("brilho") or {}).get("resposta")
+        e = (pecas.get(a[0]) or {}).get("eletrica") or {}
+        b = blocos.brilho_da_corrente(e, r["i"]) if r and "acende" in r else None
+        if b is None or not pedido:
+            return None
+        return blocos.nivel_do_brilho(b) == pedido
     if cmd == "sem_pino_solto":   # cada pino chega em alguma OUTRA peca (o par interno do botao nao conta)
         return a[0] in pecas and all(q["net"] and pecas_da_net[q["net"]] - {a[0]} for q in pecas[a[0]]["pinos"])
 
@@ -460,12 +489,13 @@ def avaliar_requisitos(pasta, modelo, sim=None):
         obj = ler_requisitos(arq.read_text())
     except gerar.ErroTxt as e:
         return {"titulo": "", "texto": "", "itens": [], "erro": f"requisitos.md, linha {e.linha}: {e.msg}"}
+    projeto = blocos.ler_projeto(pasta)
     for item in obj["itens"]:
         if modelo is None:
             item.update(status="?", motivo="a placa não montou")
             continue
         for v in item["verifica"]:
-            v["ok"] = checar(v["texto"], modelo, sim)
+            v["ok"] = checar(v["texto"], modelo, sim, projeto)
         falha = next((v for v in item["verifica"] if v["ok"] is False), None)
         if not item["verifica"]:
             item.update(status="?", motivo="sem verificação")
