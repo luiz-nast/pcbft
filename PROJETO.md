@@ -14,14 +14,16 @@ Este arquivo é a especificação inteira. Leia tudo antes do primeiro passo.
 4. **IA não gasta token com acompanhamento.** Status de requisitos e progresso dos testes são calculados pelo script. O Claude só dá um resumo **no final** da rodada.
 5. **Nenhum número inventado.** Medidas de componentes vêm de datasheet. Regras da fábrica vêm da página de capacidades da fábrica (JLCPCB como referência). Se não souber, pergunte ou marque como pendente.
 6. **Simples primeiro.** Python puro, poucas dependências, arquivos pequenos. Nada de framework no app.
+7. **Primeiro o que quer, depois a peça, por último o desenho.** O objetivo (com as perguntas de gente, como "quanta luz?") decide o tipo de cada peça; a peça é de verdade, de uma loja com estoque, com o desenho oficial dela; só então ela vai pra placa. Nada é posicionado "de cabeça".
 
 ---
 
 ## 2. Como o trabalho flui
 
 ```
-Luiz pede no Claude Code
-  → Claude edita requisitos.md e/ou placa.txt (só intenção)
+Luiz diz o que quer (no Claude Code ou respondendo as perguntas no app)
+  → objetivo e blocos em projeto.json; peças de verdade no carrinho (loja.py, conferidas no datasheet)
+  → Claude edita requisitos.md e/ou placa.txt (só intenção, com as peças do carrinho)
   → ferramenta/gerar.py: txt → modelo.json + Gerber + Excellon
   → ferramenta/testar.py: bateria de 7 etapas → testes.json
       falhou? Claude corrige e roda de novo, sozinho
@@ -38,19 +40,24 @@ Luiz pede no Claude Code
 ```
 PROJETO.md            ← este arquivo
 AGORA.md              ← onde paramos (4 linhas, Claude atualiza a cada sessão)
-.claude/skills/placa/SKILL.md   ← skill (marco 6)
+.claude/skills/        ← placa (editar e testar), nova-placa (a ordem), peca-da-loja (buscar e conferir peça)
 ferramenta/
   gerar.py            ← lê placa.txt, escreve modelo.json, Gerbers, Excellon
-  biblioteca.py       ← pinos de cada tipo de peça (de datasheet), nomes de gente, modelo elétrico, o que comprar
+  blocos.py           ← objetivo, perguntas, blocos e a conta do brilho (projeto.json)
+  loja.py             ← busca peça na JLCPCB, foto e datasheet na LCSC, desenho oficial no EasyEDA
+  conferidos.json     ← o que o Claude leu no datasheet de cada peça da loja (polaridade, limites, curvas)
+  biblioteca.py       ← peças de antes da loja e de exemplo: pinos, nomes de gente, modelo elétrico
   circuito.py         ← liga o circuito no papel (corrente contínua: pilha, resistor, LED, chave)
   testar.py           ← bateria de testes → testes.json
   letras.py           ← fonte de traços pra serigrafia
   app.py              ← abre a bancada como app (servidor local + janela)
-  instalar.py         ← atalho "Bancada de placas" no menu de aplicativos
+  instalar.py         ← atalho "Sianvolt" no menu de aplicativos
 bancada/
   index.html          ← o app (HTML + JS puro, SVG)
   icone.svg
-placas/estudo/
+placas/lanterna/
+  projeto.json        ← objetivo, respostas, blocos e a peça escolhida de cada um (o app também escreve)
+  pecas/              ← as peças do carrinho: desenho oficial + foto (só na máquina)
   requisitos.md
   placa.txt
   saida/              ← gerado: modelo.json, placa-*.gbr, placa-PTH/NPTH.drl, foto.png, fabrica.zip
@@ -67,6 +74,10 @@ As pastas em `placas/` ficam só na máquina (`.gitignore`); o repositório púb
 ---
 
 ## 4. Os arquivos de texto
+
+### 4.0 `projeto.json` (o começo: o Claude e o app escrevem)
+
+O objetivo, as perguntas respondidas (`brilho`: fraca, média, forte) e os blocos, cada um com a peça da loja escolhida e quem escolheu. A conta do brilho (`blocos.conta_do_freio`) diz que resistor usar: corrente pela curva do LED → (pilha − LED) ÷ corrente − o que o LED e a pilha freiam sozinhos → valor E24 mais perto. No `placa.txt`, o tipo de uma peça da loja é o código da LCSC (`peca R1 C119310 43 15`), e o valor vem da peça.
 
 ### 4.1 `placa.txt` (o Claude escreve)
 
@@ -193,7 +204,7 @@ HTML + JS puro, desenho em SVG (facilita clique, destaque e zoom via viewBox). T
 
 **Início:** a lista de projetos (`placas/*`), cada um com a miniatura da placa, o status dos testes, a versão e se já foi pra fábrica. Clicar abre o projeto.
 
-**Processo:** a história do projeto em 6 passos, o caminho de toda placa, pra mostrar pra alguém: objetivo e requisitos, a placa e as versões, os testes (com o resumo do Claude e o botão de rodar de novo), as peças pra comprar (a fábrica entrega só a placa nua), a fábrica (`fabrica.zip` e, se tiver `fabrica.json`, a cotação com a imagem do site) e montar e acender.
+**Processo:** a história do projeto em 7 passos, o caminho de toda placa, pra mostrar pra alguém: **objetivo** (com as perguntas, que o Luiz responde clicando), **blocos** (a cadeia de tipos de peça com o símbolo e o porquê de cada um), **carrinho** (foto, tamanho, preço e estoque de cada peça, a conta do resistor e o Trocar com as opções da loja; escolher troca o `placa.txt` e roda os testes), a **placa** e as versões, os **testes** (com o resumo do Claude e o botão de rodar de novo), a **fábrica** (`fabrica.zip` e, se tiver `fabrica.json`, a cotação com a imagem do site) e **montar e acender**.
 
 **Topo:** ← projetos · nome do projeto · abas **Processo | Thinking | Projeto | Testes** · status dos testes (✓/✗) · relógio de versões (abre lista; escolher v1/v2 mostra a placa daquela versão; opção "destacar o que mudou").
 
@@ -224,7 +235,8 @@ Cada marco termina com algo que o Luiz vê funcionando, testado pelo Claude.
 5. **Requisitos + aba Thinking** (modo simples primeiro).
 6. **Skill**: `.claude/skills/placa/SKILL.md` com o fluxo, o formato do `placa.txt`, as regras de Gerber/Excellon e "rode testar.py antes de dizer que terminou".
 7. **Placa de estudo de verdade**: biblioteca com valores de datasheet (DevKit, LED, resistor, botão, buzzer), pads passantes nos dois lados pros pinos do DevKit, máscara e serigrafia, regras reais da JLCPCB, `fabrica.zip`. **Encomendar.**
-8. Depois, se fizer falta: MCP pra o Claude consultar a bancada direto.
+8. **Ordem nova e loja** (feito em 2026-10-24): objetivo com perguntas, blocos, carrinho com peças da JLCPCB/LCSC e desenho oficial do EasyEDA, conta do brilho, app escolhendo peça.
+9. Depois, se fizer falta: extensão do Chrome pra mandar peça de qualquer loja pro carrinho; peças de superfície (SMD) montadas pela fábrica; MCP pra o Claude consultar a bancada direto.
 
 Fora do escopo por agora: chat embutido no app, simulação elétrica, autoroteamento, mais de 2 camadas.
 

@@ -1,6 +1,6 @@
 # Agora
 
 1. **Objetivo:** Sianvolt, ferramenta minha que transforma `placa.txt` em arquivos de fábrica, sem KiCad, com um app pra investigar, ligar o circuito no papel e acompanhar até a fábrica.
-2. **Já existe:** marcos 1 a 7 (código) mais o app no menu, a aba Processo em 6 passos, o simulador (etapa 4 + ▶ no Projeto com painel), pinos com nome de gente e a lista de compras. Quatro peças reais na biblioteca. A **lanterninha** (`placas/lanterna`) passou em tudo e foi cotada na JLCPCB (US$ 4 por 5 placas, sem pedido). A placa de estudo continua na v3, parada na etapa 3.
-3. **Próximo passo:** o Luiz decidir se encomenda a lanterninha. Na placa de estudo, escolher o DevKit e o buzzer reais pra destravar o `fabrica.zip`.
-4. **Em aberto:** o simulador só conhece pilha, resistor, LED e chave; o DevKit não liga no papel.
+2. **Já existe:** a ordem nova (objetivo com a pergunta do brilho → blocos → carrinho com peças de verdade da JLCPCB/LCSC → placa → testes → fábrica → montar), a loja no app (Trocar mostra as opções; escolher troca o `placa.txt` e roda os testes) e o desenho oficial de cada peça. A **lanterninha** foi refeita assim: brilho fraco (sugestão do Claude), 240 Ω, 4,3 mA, passa em tudo (v3). A cotação de US$ 4 na JLCPCB é da v2, antes da troca de peças.
+3. **Próximo passo:** o Luiz escolher o brilho (fraca, média ou forte) e as peças no app; cotar de novo e decidir se encomenda. Na placa de estudo, refazer na ordem nova (DevKit e buzzer da loja).
+4. **Em aberto:** a busca da JLCPCB é por palavra exata; só peça de furo; o simulador só conhece pilha, resistor, LED e chave; extensão do Chrome pra mandar peça de outra loja, se fizer falta.

@@ -2,17 +2,19 @@
 
 Ferramenta pessoal que transforma a descrição de uma placa em texto nos arquivos que a fábrica aceita (Gerber + Excellon), sem KiCad. Vem com um app local para investigar a placa, ligar o circuito no papel e acompanhar o caminho até a fábrica.
 
+A ordem é a de quem projeta de verdade: primeiro o que a placa tem que fazer ("quanta luz você quer?"), depois o tipo de cada peça (pilha → botão → resistor → LED), depois as peças de verdade, escolhidas no estoque da JLCPCB/LCSC com o desenho oficial delas, e só então a placa:
+
 ```
 placa 52 34
 furos cantos 3.2
-peca BT1 pilha_cr2032 20 17
-peca SW1 botao_6x6 43 25
-peca R1 resistor_axial 43 15 100
-peca D1 led_5mm 43 7
+peca BT1 C5365915 20 17     # suporte de CR2032 (código da LCSC)
+peca SW1 C393938 43 25      # botão 6×6
+peca R1 C119310 43 15       # 240 Ω: sai da conta do brilho fraco
+peca D1 C779439 43 7        # LED vermelho 5 mm
 liga BT1.1 SW1.1
 liga SW1.3 R1.1
-liga R1.2 D1.1
-liga D1.2 GND
+liga R1.2 D1.2
+liga D1.1 GND
 ```
 
 ## Usar
@@ -23,10 +25,12 @@ uv venv .venv && uv pip install -r requirements.txt
 python3 ferramenta/instalar.py   # põe o "Sianvolt" no menu de aplicativos
 ```
 
-O app (`ferramenta/app.py`) abre numa janela própria, sem abas, com a lista de projetos. Cada projeto conta a história em 4 passos (objetivo, placa, testes, fábrica) e dá pra rodar os testes de novo de lá. Sem instalar: `python3 ferramenta/app.py`.
+O app (`ferramenta/app.py`) abre numa janela própria, sem abas, com a lista de projetos. Cada projeto conta a história em 7 passos (objetivo, blocos, carrinho, placa, testes, fábrica, montar); dá pra responder as perguntas, trocar uma peça pelas opções da loja e rodar os testes de lá. Sem instalar: `python3 ferramenta/app.py`.
+
+Peças: `python3 ferramenta/loja.py buscar "LED 5mm red"` e `python3 ferramenta/loja.py importar C779439 led placas/lanterna`.
 
 O `testar.py` gera `modelo.json`, os Gerbers, o Excellon e a versão, e depois roda 7 etapas: lê o txt, confere peças, confere ligações, liga o circuito no papel (pilha fraca, nominal e nova), regras da fábrica (JLCPCB), relê o Gerber com o `gerbonara` e tira uma foto da placa. O `fabrica.zip` só sai quando tudo passa.
 
-O app tem quatro abas: **Processo** (a história do projeto: objetivo, placa, testes, peças, fábrica, montar), **Thinking** (objetivo e requisitos), **Projeto** (a placa, com inspetor e o ▶ que liga o circuito, com painel pra mexer na pilha e no resistor) e **Testes** (as etapas ao vivo).
+O app tem quatro abas: **Processo** (a história do projeto: objetivo, blocos, carrinho, placa, testes, fábrica, montar), **Thinking** (objetivo e requisitos), **Projeto** (a placa, com inspetor e o ▶ que liga o circuito, com painel pra mexer na pilha e no resistor) e **Testes** (as etapas ao vivo).
 
-A especificação inteira está em [PROJETO.md](PROJETO.md). A biblioteca tem quatro peças reais (resistor, LED, botão, suporte de CR2032), com footprint do KiCad e datasheet; as peças do ESP32 ainda são de exemplo.
+A especificação inteira está em [PROJETO.md](PROJETO.md). As peças da loja trazem o desenho do EasyEDA; o que a loja não diz (o + do LED, os pinos do botão, as curvas) o Claude lê no datasheet e guarda em `ferramenta/conferidos.json`. As peças do ESP32 da placa de estudo ainda são de exemplo.

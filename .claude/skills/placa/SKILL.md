@@ -7,6 +7,8 @@ description: Editar uma placa deste repositório (placa.txt, requisitos.md, bibl
 
 O Claude decide só a **intenção** (quais peças, onde, o que liga em quê). Contas, pinos, checagens e Gerber são código em `ferramenta/`. Especificação inteira: `PROJETO.md`.
 
+**Antes de desenhar vem o projeto**: objetivo, blocos e carrinho (`projeto.json`, skill `nova-placa`). Peça que não está no carrinho não entra na placa; peça nova vem da loja (skill `peca-da-loja`).
+
 ## Fluxo
 
 1. Edite `placas/<nome>/placa.txt` (e `requisitos.md` se o objetivo mudou). Nada mais à mão.
@@ -27,7 +29,7 @@ O Claude decide só a **intenção** (quais peças, onde, o que liga em quê). C
 
 ## Simulador
 
-`ferramenta/circuito.py` (etapa 4 e as checagens `acende`/`nao_queima`) e a função `simular` em `bancada/index.html` (o ▶ e o painel) são **a mesma conta em duas línguas**: análise nodal; LED aceso = joelho (`vf − r_s·i_teste`) mais `r_s` em série, os três do datasheet; pilha com uma resistência mínima só pra conta (não é a interna de verdade); chave apertada vira fio; pino sem net é aberto. Mudou um, muda o outro, e confira que os dois dão o mesmo número pra lanterninha (11 mA com 3,0 V e 100 Ω).
+`ferramenta/circuito.py` (etapa 4 e as checagens `acende`/`nao_queima`/`brilho`) e a função `simular` em `bancada/index.html` (o ▶ e o painel) são **a mesma conta em duas línguas**: análise nodal; LED aceso = joelho (`vf − r_s·i_teste`) mais `r_s` em série, os três do datasheet, entre os pinos `mais` e `menos` da peça; pilha com a `r_interna` do datasheet em série (sem ela, uma resistência mínima só pra conta); chave apertada vira fio; pino sem net é aberto. A curva de brilho (`blocos.brilho_da_corrente` e `brilhoDaCorrente`) também existe nas duas. Mudou um, muda o outro, e confira que os dois dão o mesmo número pra lanterninha (4,3 mA com 3,0 V e 240 Ω).
 
 ## Falar com o Luiz sobre eletrônica
 
@@ -50,10 +52,13 @@ Uma instrução por linha, mm, origem no canto inferior esquerdo. `#` começa co
 ```
 placa 70 45                 # contorno L x A
 furos cantos 3.2            # 4 furos de fixação a 3,5 mm das bordas (3,2 = M3)
-peca R1 resistor_axial 38.62 5 100   # REF TIPO X Y [VALOR]; TIPO existe em biblioteca.py; VALOR em ohms (100, 4.7k)
+peca R1 C119310 43 15       # REF TIPO X Y; TIPO = código da LCSC (peça do carrinho) ou um tipo de biblioteca.py
+peca R2 resistor_axial 38.62 5 100   # tipo da biblioteca: VALOR em ohms (100, 4.7k); peça da loja já traz o valor
 liga DevKit.11 R1.1         # REF.PINO ou nome de net (GND)
-liga D1.2 GND               # vai até o pino de GND mais perto
+liga D1.1 GND               # vai até o pino de GND mais perto
 ```
+
+- Os pinos de uma peça da loja são os do desenho oficial: veja os `nomes` em `placas/<nome>/pecas/<codigo>.json` antes de ligar (no LED `C779439` o + é o pino **2**).
 
 - Trilha é linha reta, 0,3 mm. Se duas cruzarem ou passarem perto de um pad, a etapa 3 acusa **curto**: mude a posição das peças (ou escolha outro pino) até a linha reta ficar limpa.
 - Uma ligação entre nets com nome diferente (GND com 3V3) é erro.
@@ -66,15 +71,15 @@ Uma frase.
 
 ## R1 Título do requisito
 pecas: D1 R1
-verifica: ligado R1.2 D1.1      # existe | ligado A B | separado A B | sem_pino_solto | acende REF | nao_queima REF
+verifica: ligado R1.2 D1.2      # existe | ligado A B | separado A B | sem_pino_solto | acende REF | nao_queima REF | brilho REF
 - sub-requisito em texto
 ```
 
-O status é calculado pelo `testar.py`. Nunca escreva status à mão. Checagem nova vira código em `testar.py` (`CHECAGENS`, `checar`).
+`brilho D1`: o LED, na pilha nominal, dá o nível que o Luiz pediu em `projeto.json` (fraca, média ou forte, o mais perto pela curva do datasheet). O status é calculado pelo `testar.py`. Nunca escreva status à mão. Checagem nova vira código em `testar.py` (`CHECAGENS`, `checar`).
 
 ## Biblioteca
 
-`ferramenta/biblioteca.py`: `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, juntos, nomes, eletrica, compra, fonte`. **Toda peça leva `nomes`** de gente pros pinos (`+`, `−`, `A`/`B`, `lado 1`): o Luiz não sabe o que é "pino 1", e o app mostra o nome. `eletrica` é o modelo do simulador; sem ele a etapa 4 pula. `juntos` = pinos ligados por dentro da peça (botão 1-2 e 3-4): ligar os dois lados do botão no mesmo pino deixa ele em curto. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo: a bancada avisa e o `fabrica.zip` não é gerado. Não sabe a medida? Pergunte ou deixe pendente. Peça nova: tire pinos, pads e furo do footprint oficial do KiCad (`.kicad_mod` bruto do GitLab, y invertido, origem no centro do corpo) e confira com o datasheet.
+Peça nova vem da loja (skill `peca-da-loja`): o desenho é o oficial do EasyEDA e o que a loja não diz entra em `ferramenta/conferidos.json`. A `ferramenta/biblioteca.py` fica pras peças de antes (e de exemplo): `tipo -> pinos (dx, dy, pad[, net]), furo, corpo, juntos, nomes, eletrica, compra, fonte`. **Toda peça leva `nomes`** de gente pros pinos (`+`, `−`, `A`/`B`, `lado 1`): o Luiz não sabe o que é "pino 1", e o app mostra o nome. `eletrica` é o modelo do simulador; sem ele a etapa 4 pula. `juntos` = pinos ligados por dentro da peça (botão 1-2 e 3-4): ligar os dois lados do botão no mesmo pino deixa ele em curto. **Nenhum número inventado**: medidas vêm do datasheet da peça escolhida, com o link em `fonte`. `fonte: None` = exemplo: a bancada avisa e o `fabrica.zip` não é gerado. Não sabe a medida? Pergunte ou deixe pendente. Peça nova: tire pinos, pads e furo do footprint oficial do KiCad (`.kicad_mod` bruto do GitLab, y invertido, origem no centro do corpo) e confira com o datasheet.
 
 ## Regras de formato (já aprendidas)
 
@@ -87,9 +92,10 @@ O status é calculado pelo `testar.py`. Nunca escreva status à mão. Checagem n
 
 ## Eletrônica (regras simples, pra explicar pro Luiz)
 
-- LED sempre com resistor em série; sem ele, o LED queima. O `+` (ânodo, perna comprida) é o nosso pino 1.
-- Corrente do LED = (pilha − queda do LED) ÷ resistor. Com 3 V, 1,9 V de LED e 100 Ω: 11 mA. O datasheet mede a 10 mA; o máximo é 30 mA.
-- Pilha CR2032: 3,0 V nominal, considerada fraca em 2,0 V. Teste sempre a faixa toda, não só o valor nominal.
+- LED sempre com resistor em série; sem ele, o LED queima. O `+` (ânodo, perna comprida) muda de número conforme a peça: olhe os `nomes`.
+- Quem manda no brilho é a **corrente**, não a voltagem: a pilha empurra, o LED pede uns 1,9 V, o resistor freia o resto. Resistor menor, mais luz e pilha dura menos.
+- Corrente do LED = (pilha − LED) ÷ (resistor + o que a pilha e o LED freiam sozinhos). Lanterninha com brilho fraco: (3,0 − 1,9) ÷ (240 + 13,5) ≈ 4,3 mA, ≈ 27% do brilho do anúncio.
+- Pilha CR2032: 3,0 V nominal, fraca em 2,0 V; o fabricante só testou até ~6,8 mA (pulsos de 2 s). Acima disso funciona, mas rende menos. Teste sempre a faixa toda, não só o valor nominal.
 - Botão de 4 pinos: 1-2 são o mesmo lado, 3-4 o outro. Ligar a pilha e o resistor no mesmo lado deixa o LED sempre aceso (a checagem `separado` pega).
 - GND é o terra, o 0 V de referência. Todo GND da placa é a mesma net.
 - Furo de fixação não tem cobre; cobre perto dele conta como borda (0,2 mm).
