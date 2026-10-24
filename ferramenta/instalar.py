@@ -1,4 +1,4 @@
-"""instalar.py: poe o pcbft no menu de aplicativos (Linux).
+"""instalar.py: poe o Sianvolt no menu de aplicativos (Linux).
 
 uso: python3 ferramenta/instalar.py            (instala)
      python3 ferramenta/instalar.py --remover  (tira do menu)
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-ATALHO = Path.home() / ".local" / "share" / "applications" / "pcbft.desktop"
+ATALHO = Path.home() / ".local" / "share" / "applications" / "sianvolt.desktop"
 PYTHON = "/usr/bin/python3" if Path("/usr/bin/python3").exists() else sys.executable   # o do sistema nao muda de lugar
 
 if "--remover" in sys.argv:
@@ -20,7 +20,7 @@ if "--remover" in sys.argv:
 ATALHO.parent.mkdir(parents=True, exist_ok=True)
 ATALHO.write_text(f"""[Desktop Entry]
 Type=Application
-Name=pcbft
+Name=Sianvolt
 Comment=Projetos de placa: objetivo, placa, testes, peças e fábrica
 Exec="{PYTHON}" "{RAIZ / 'ferramenta' / 'app.py'}"
 Icon={RAIZ / 'bancada' / 'icone.svg'}
@@ -31,4 +31,4 @@ Keywords=placa;pcb;gerber;bancada;
 ATALHO.chmod(0o755)
 if shutil.which("update-desktop-database"):
     subprocess.run(["update-desktop-database", str(ATALHO.parent)], capture_output=True)
-print(f"instalado: {ATALHO}\nprocure por 'pcbft' no menu de aplicativos")
+print(f"instalado: {ATALHO}\nprocure por 'Sianvolt' no menu de aplicativos")

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>pcbft</title>
+<title>Sianvolt</title>
 <link rel="icon" href="icone.svg">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
@@ -222,7 +222,7 @@ svg.mini { width: 100%; height: auto; display: block; border-radius: 8px; backgr
 <body>
 <header>
   <a class="voltar" id="voltar" href="./" aria-label="Voltar aos projetos" title="Projetos">←</a>
-  <span class="nome" id="nome">pcbft</span>
+  <span class="nome" id="nome">Sianvolt</span>
   <nav aria-label="Abas" id="abas">
     <button type="button" data-aba="processo">Processo</button>
     <button type="button" data-aba="thinking">Thinking</button>
@@ -599,7 +599,7 @@ function etiqueta(x, y, texto, fonte, fundo, cor) {
 // ---------- topo ----------
 function desenharTopo() {
   $('#nome').textContent = S.testes?.objetivo?.titulo || PLACA;
-  document.title = `${$('#nome').textContent} · pcbft`;
+  document.title = `${$('#nome').textContent} · Sianvolt`;
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-pressed', b.dataset.aba === S.aba));
   const t = S.testes, st = $('#status');
   if (!t) { st.textContent = 'sem testes'; st.style.color = 'var(--sec)'; }
@@ -1316,7 +1316,7 @@ if (PLACA) {
   setInterval(atualizar, 1000);
 } else {   // tela de projetos: some com as abas e relê a lista de vez em quando
   for (const id of ['voltar', 'abas', 'direita']) $('#' + id).hidden = true;
-  document.title = 'pcbft';
+  document.title = 'Sianvolt';
   desenharInicio();
   setInterval(desenharInicio, 5000);
 }

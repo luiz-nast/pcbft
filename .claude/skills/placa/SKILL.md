@@ -23,7 +23,7 @@ O Claude decide só a **intenção** (quais peças, onde, o que liga em quê). C
    ```
 6. Atualize o `AGORA.md` no fim da sessão.
 
-**Nunca diga que terminou sem ter rodado o `testar.py`.** O pcbft (`python3 ferramenta/app.py`, ou o atalho "pcbft" no menu) se atualiza sozinho; não descreva o progresso no chat, o resumo final basta.
+**Nunca diga que terminou sem ter rodado o `testar.py`.** O Sianvolt (`python3 ferramenta/app.py`, ou o atalho "Sianvolt" no menu) se atualiza sozinho; não descreva o progresso no chat, o resumo final basta.
 
 ## Simulador
 

@@ -1,4 +1,4 @@
-"""app.py: abre o pcbft como um app. Serve o repositorio so pra esta maquina e abre uma janela.
+"""app.py: abre o Sianvolt como um app. Serve o repositorio so pra esta maquina e abre uma janela.
 
 uso: python3 ferramenta/app.py               (abre a janela; fecha sozinho uns minutos depois da janela)
      python3 ferramenta/app.py --sem-janela  (so o servidor, ate o Ctrl+C)
