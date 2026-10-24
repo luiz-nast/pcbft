@@ -1388,7 +1388,7 @@ function desenharTestes(main) {
       <div class="links">${links}${fotoOk ? `<a href="${BASE}saida/foto.png" target="_blank" rel="noopener">Ver a foto tirada do Gerber ↗</a>` : ''}</div>
       ${m?.fabrica ? (m.fabrica.pronta && !falha && !t.rodando
         ? `<div class="links"><a href="${BASE}saida/fabrica.zip" download>Baixar fabrica.zip ↓</a></div>`
-        : `<span class="sub">fabrica.zip ${m.fabrica.pronta ? 'sai quando todos os testes passarem' : 'bloqueado: medidas de exemplo em ' + esc(m.fabrica.falta_datasheet.join(', '))}</span>`) : ''}
+        : `<span class="sub">fabrica.zip ${m.fabrica.pronta ? 'sai quando todos os testes passarem' : 'bloqueado: peça sem datasheet conferido em ' + esc([...(m.fabrica.falta_datasheet || []), ...(m.fabrica.falta_conferir || [])].join(', '))}</span>`) : ''}
     </div>
   </section>`;
 }
